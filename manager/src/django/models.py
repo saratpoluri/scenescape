@@ -853,30 +853,6 @@ class BoundingBox(models.Model):
       return None
     return ((tx, ty), (bx, by))
 
-  def within(self, coord):
-    bbox = self.boundingBox()
-    if not bbox:
-      return False
-    if coord[0] < bbox[0][0] or coord[1] < bbox[0][1] \
-       or coord[0] > bbox[1][0] or coord[1] > bbox[1][1]:
-      return False
-
-    line = ScenescapeLine(ScenescapePoint(coord),
-                          ScenescapePoint((bbox[1][0] + 1000, bbox[1][1] + 1000)))
-    crossings = 0
-    points = self.points.all()
-    for i in range(len(points)):
-      pt1 = ScenescapePoint((points[i].x, points[i].y))
-      pt2 = ScenescapePoint((points[(i + 1) % len(points)].x,
-                              points[(i + 1) % len(points)].y))
-      segment = ScenescapeLine(pt1, pt2)
-      isect = segment.intersection(line)
-      if isect and line.isPointOnLine(isect) and segment.isPointOnLine(isect):
-        crossings += 1
-    if crossings & 1 == 0:
-      return False
-    return True
-
   def notifydbupdate(self):
     transaction.on_commit(sendUpdateCommand)
     return

@@ -11,7 +11,9 @@
 
 import math
 
+import open3d as o3d
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from fast_geometry import Point, Line, Rectangle, Polygon, Size
 
@@ -32,6 +34,7 @@ class Region:
     self.uuid = uuid
     self.name = name
     self.area = None
+    self.mesh = None
     self.updatePoints(info)
     self.objects = {}
     self.when = -1
@@ -86,6 +89,64 @@ class Region:
     self.boundingBox = Rectangle(origin=Point(tx, ty),
                                  opposite=Point(bx, by))
     return
+  
+  def createMesh(self):
+    ROI_Z_TRANSLATION = 0
+    ROI_Z_HEIGHT = 0.25
+    roi_pts = [[pt.x, pt.y] + [ROI_Z_TRANSLATION] for pt in self.points]
+    roi_pts += [[pt.x, pt.y] + [ROI_Z_TRANSLATION + ROI_Z_HEIGHT] for pt in self.points]
+    obb = o3d.geometry.OrientedBoundingBox.create_from_points(
+      o3d.utility.Vector3dVector(np.array(roi_pts, dtype=np.float64)),
+      #robust = True
+      )
+    translation_bc_adjust = np.vstack([
+      np.hstack([
+        np.identity(3),
+        np.array([0, 0, obb.extent[2]/2]).reshape((3,1))
+        ]),
+      np.array([0, 0, 0, 1])
+    ])
+    R_center = np.vstack([
+      np.hstack([np.array(obb.R), np.zeros((3,1))]),
+      np.array([0, 0, 0, 1])
+      ])
+    translation_center = np.vstack([
+      np.hstack([
+        np.identity(3),
+        np.array(obb.center).reshape(3,1)
+        ]),
+      np.array([0, 0, 0, 1])
+    ])
+    T_RC = translation_center @ R_center @ np.linalg.inv(translation_bc_adjust)
+    self.translation = T_RC[:-1,3].tolist()
+    self.rotation = Rotation.from_matrix(np.array(obb.R)).as_quat().tolist()
+    self.size = obb.extent.tolist()
+    self.mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(
+      obb
+      ).compute_vertex_normals().paint_uniform_color([0.9, 0.9, 0.1])
+    
+  def createObjectMesh(self, obj):
+    # populate object
+    mesh = o3d.geometry.TriangleMesh.create_box(
+      obj.size[0],
+      obj.size[1],
+      obj.size[2]
+      ).translate(np.array([
+        -obj.size[0]/2,
+        -obj.size[1]/2,
+        0
+        ])).rotate(
+          Rotation.from_quat(np.array(obj.rotation)).as_matrix(),
+          center = np.zeros(3)
+          ).translate(obj.sceneLoc.asNumpyCartesian)
+    obj.mesh = mesh.compute_vertex_normals().paint_uniform_color([0.1, 0.9, 0.1])
+    return obj
+
+  def is_intersecting(self, obj):
+    if self.mesh == None:
+      self.createMesh()
+    self.createObjectMesh(obj)
+    return obj.mesh.is_intersecting(self.mesh)
 
   def isPointWithin(self, coord):
     if self.area == Region.REGION_SCENE:
