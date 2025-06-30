@@ -143,4 +143,13 @@ function checkWebSocketConnection(url) {
   });
 }
 
-export { pixelsToMeters, metersToPixels, compareIntrinsics, waitUntil, initializeOpencv, resizeRendererToDisplaySize, checkWebSocketConnection };
+function updateElements(elements, action, condition) {
+  elements.forEach(function (e) {
+    const element = document.getElementById(e);
+    if (element) {
+      document.getElementById(e)[action] = condition;
+    }
+  });
+}
+
+export { pixelsToMeters, metersToPixels, compareIntrinsics, waitUntil, initializeOpencv, resizeRendererToDisplaySize, checkWebSocketConnection, updateElements };
