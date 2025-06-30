@@ -83,8 +83,8 @@ async function checkBrokerConnections() {
   const urlSecure = 'wss://' + window.location.host + '/mqtt';
 
   const promises = [
-      checkWebSocketConnection(urlInsecure),  // Check insecure port
-      checkWebSocketConnection(urlSecure)     // Check secure port
+    checkWebSocketConnection(urlInsecure),  // Check insecure port
+    checkWebSocketConnection(urlSecure)     // Check secure port
   ];
 
   const results = await Promise.allSettled(promises);
@@ -93,312 +93,312 @@ async function checkBrokerConnections() {
   let isSecure = false;
 
   results.forEach(result => {
-      if (result.status === 'fulfilled') {
-          openPort = result.value;
-      }
+    if (result.status === 'fulfilled') {
+      openPort = result.value;
+    }
   });
 
   if (openPort) {
-      if (openPort === urlInsecure) {
-          isSecure = false;
-          $("#broker").val(urlInsecure);
-      } else if (openPort === urlSecure) {
-          broker.value = broker.value.replace("localhost", window.location.host);
-      }
-      console.log(`Url ${openPort} is open`);
+    if (openPort === urlInsecure) {
+      isSecure = false;
+      $("#broker").val(urlInsecure);
+    } else if (openPort === urlSecure) {
+      broker.value = broker.value.replace("localhost", window.location.host);
+    }
+    console.log(`Url ${openPort} is open`);
 
-  $("#connect").on("click", function () {
-    console.log("Attempting to connect to " + broker.value);
-    var client = mqtt.connect(broker.value);
-    sessionStorage.setItem("connectToMqtt", true);
+    $("#connect").on("click", function () {
+      console.log("Attempting to connect to " + broker.value);
+      var client = mqtt.connect(broker.value);
+      sessionStorage.setItem("connectToMqtt", true);
 
-    client.on('connect', function () {
-      console.log("Connected to " + broker.value);
-      if ($("#topic").val() !== undefined) {
-        client.subscribe($("#topic").val());
-        console.log("Subscribed to " + $("#topic").val());
-      }
-
-      client.subscribe(APP_NAME + "/event/" + "+/" + scene_id + "/+/+");
-      console.log("Subscribed to " + APP_NAME + "/event/" + "+/" + scene_id + "/+/+");
-
-      if (document.getElementById("scene_children")?.value !== '0') {
-        client.subscribe(APP_NAME + SYS_CHILDSCENE_STATUS + "/+");
-        console.log("Subscribed to " + APP_NAME + SYS_CHILDSCENE_STATUS + "/+");
-        var remote_childs = $("[id^='mqtt_status_remote']").map((_, el) => el.id.split('_').slice(3).join('_')).get();
-        remote_childs.forEach(e => {
-          client.publish(APP_NAME + SYS_CHILDSCENE_STATUS + "/" + e, "isConnected");
-        });
-      }
-
-      if (window.location.href.includes('/cam/calibrate/')) {
-        // distortion available only for percebro or supporting VA
-        document.getElementById("lock_distortion_k1").style.visibility = 'hidden';
-        advanced_calibration_fields = $("#kubernetes-fields").val().split(",");
-        updateElements(advanced_calibration_fields.map(e => e + "_wrapper"), "hidden", true);
-
-        client.subscribe(APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val());
-        console.log("Subscribed to " + APP_NAME + SYS_PERCEBRO_STATUS+ $("#sensor_id").val());
-        client.publish(APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val(), "isAlive");
-
-        calibration_strategy = document.getElementById("calib_strategy").value;
-
-        if (calibration_strategy === "Manual") {
-          document.getElementById("auto-camcalibration").hidden = true;
-        } else {
-          client.subscribe(APP_NAME + SYS_AUTOCALIB_STATUS);
-          console.log("Subscribed to " + SYS_AUTOCALIB_STATUS);
-          client.publish(APP_NAME + SYS_AUTOCALIB_STATUS, "isAlive");
-          client.subscribe(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id);
-          console.log("Subscribed to " + CMD_AUTOCALIB_SCENE);
-        }
-      }
-
-      $("#mqtt_status").addClass("connected");
-
-      // Capture thumbnail snapshots
-      if ($(".snapshot-image").length) {
-        client.subscribe(APP_NAME + IMAGE_CAMERA + '+');
-
-        $(".snapshot-image").each(function () {
-          client.publish($(this).attr("topic"), 'getimage');
-        });
-
-        $("input#live-view").on("change", function () {
-          if ($(this).is(':checked')) {
-            $(".snapshot-image").each(function () {
-              client.publish($(this).attr("topic"), 'getimage');
-            });
-            $("#cameras-tab").click(); // Select the cameras tab
-            $(".camera-card").addClass("live-view");
-            // $(".hide-live").hide();
-          }
-          else {
-            $(".camera-card").removeClass("live-view");
-            // $(".hide-live").show();
-          }
-        });
-      }
-      else if ($("#auto-camcalibration").length) {
-        var auto_topic = APP_NAME + DATA_AUTOCALIB_CAM_POSE + $("#sensor_id").val();
-        client.subscribe(auto_topic);
-      }
-    });
-
-    client.on('close', function () {
-      $("[id^='mqtt_status']").removeClass("connected")
-      $(".rate").text("--");
-      $("#scene-rate").text("--");
-    });
-
-    client.on('message', function (topic, data) {
-      var msg;
-      try {
-        msg = JSON.parse(data);
-      } catch (error) {
-        msg = String(data);
-      }
-      var img;
-
-      if (topic.includes(DATA_REGULATED)) {
-        if (show_telemetry) {
-          // Show the FPS for each camera
-          for (const [key, value] of Object.entries(msg.rate)) {
-              document.getElementById("rate-" + key).innerText = value + " FPS";
-          }
-
-          // Show the scene controller update rate
-          document.getElementById("scene-rate").innerText = msg.scene_rate.toFixed(1);
+      client.on('connect', function () {
+        console.log("Connected to " + broker.value);
+        if ($("#topic").val() !== undefined) {
+          client.subscribe($("#topic").val());
+          console.log("Subscribed to " + $("#topic").val());
         }
 
-        // Plot the marks
-        plot(msg.objects, scale, scene_y_max, svgCanvas);
-      }
-      else if (topic.includes(SYS_PERCEBRO_STATUS)) {
-        if (msg == "running") {
-          camera_calibration.setMqttClient(client, APP_NAME + IMAGE_CALIBRATE + $("#sensor_id").val());
-          document.getElementById("lock_distortion_k1").style.visibility='visible';
-          updateElements(advanced_calibration_fields.map(e => e + "_wrapper"), "hidden", false);
-        }
-      }
-      else if (topic.includes("event")) {
-        var etype = topic.split("/")[2];
-        if (etype == 'region') {
-          if (msg['metadata']?.fromSensor == true) {
-            drawSensor(msg['metadata'], msg['metadata']['title'], "child_sensor");
-          }
-          else {
-            drawRoi(msg['metadata'], msg['metadata']['uuid'], "child_roi");
-          }
-          var counts = msg['counts'];
-          var occupancy = 0;
-          if (counts && typeof counts === 'object') {
-            Object.keys(counts).forEach(function (category) {
-              var count = counts[category];
-              if (typeof count === 'number') {
-                occupancy += count;
-              }
-            });
-            setROIColor(msg['metadata']['uuid'], occupancy);
-          }
+        client.subscribe(APP_NAME + "/event/" + "+/" + scene_id + "/+/+");
+        console.log("Subscribed to " + APP_NAME + "/event/" + "+/" + scene_id + "/+/+");
 
-          var value = msg['value']
-          if (value) {
-            setSensorColor(msg['metadata']['title'], value, msg['metadata']['area']);
+        if (document.getElementById("scene_children")?.value !== '0') {
+          client.subscribe(APP_NAME + SYS_CHILDSCENE_STATUS + "/+");
+          console.log("Subscribed to " + APP_NAME + SYS_CHILDSCENE_STATUS + "/+");
+          var remote_childs = $("[id^='mqtt_status_remote']").map((_, el) => el.id.split('_').slice(3).join('_')).get();
+          remote_childs.forEach(e => {
+            client.publish(APP_NAME + SYS_CHILDSCENE_STATUS + "/" + e, "isConnected");
+          });
+        }
+
+        if (window.location.href.includes('/cam/calibrate/')) {
+          // distortion available only for percebro or supporting VA
+          document.getElementById("lock_distortion_k1").style.visibility = 'hidden';
+          advanced_calibration_fields = $("#kubernetes-fields").val().split(",");
+          updateElements(advanced_calibration_fields.map(e => e + "_wrapper"), "hidden", true);
+
+          client.subscribe(APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val());
+          console.log("Subscribed to " + APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val());
+          client.publish(APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val(), "isAlive");
+
+          calibration_strategy = document.getElementById("calib_strategy").value;
+
+          if (calibration_strategy === "Manual") {
+            document.getElementById("auto-camcalibration").hidden = true;
+          } else {
+            client.subscribe(APP_NAME + SYS_AUTOCALIB_STATUS);
+            console.log("Subscribed to " + SYS_AUTOCALIB_STATUS);
+            client.publish(APP_NAME + SYS_AUTOCALIB_STATUS, "isAlive");
+            client.subscribe(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id);
+            console.log("Subscribed to " + CMD_AUTOCALIB_SCENE);
           }
         }
-        else if (etype == 'tripwire') {
-          var trip = msg['metadata'];
-          trip.points[0] = metersToPixels(trip.points[0], scale, scene_y_max);
-          trip.points[1] = metersToPixels(trip.points[1], scale, scene_y_max);
-          newTripwire(trip, msg['metadata']['uuid'], "child_tripwire");
-        }
-      }
-      else if (topic.includes("singleton")) {
-        plotSingleton(msg);
-      }
-      else if (topic.includes(IMAGE_CAMERA)) {
-        // Use native JS since jQuery.load() pukes on data URI's
+
+        $("#mqtt_status").addClass("connected");
+
+        // Capture thumbnail snapshots
         if ($(".snapshot-image").length) {
-          var id = topic.split("camera/")[1];
+          client.subscribe(APP_NAME + IMAGE_CAMERA + '+');
 
-          img = document.getElementById(id);
-          if (img !== undefined && img !== null) {
-            img.setAttribute("src", "data:image/jpeg;base64," + msg.image);
+          $(".snapshot-image").each(function () {
+            client.publish($(this).attr("topic"), 'getimage');
+          });
+
+          $("input#live-view").on("change", function () {
+            if ($(this).is(':checked')) {
+              $(".snapshot-image").each(function () {
+                client.publish($(this).attr("topic"), 'getimage');
+              });
+              $("#cameras-tab").click(); // Select the cameras tab
+              $(".camera-card").addClass("live-view");
+              // $(".hide-live").hide();
+            }
+            else {
+              $(".camera-card").removeClass("live-view");
+              // $(".hide-live").show();
+            }
+          });
+        }
+        else if ($("#auto-camcalibration").length) {
+          var auto_topic = APP_NAME + DATA_AUTOCALIB_CAM_POSE + $("#sensor_id").val();
+          client.subscribe(auto_topic);
+        }
+      });
+
+      client.on('close', function () {
+        $("[id^='mqtt_status']").removeClass("connected")
+        $(".rate").text("--");
+        $("#scene-rate").text("--");
+      });
+
+      client.on('message', function (topic, data) {
+        var msg;
+        try {
+          msg = JSON.parse(data);
+        } catch (error) {
+          msg = String(data);
+        }
+        var img;
+
+        if (topic.includes(DATA_REGULATED)) {
+          if (show_telemetry) {
+            // Show the FPS for each camera
+            for (const [key, value] of Object.entries(msg.rate)) {
+              document.getElementById("rate-" + key).innerText = value + " FPS";
+            }
+
+            // Show the scene controller update rate
+            document.getElementById("scene-rate").innerText = msg.scene_rate.toFixed(1);
           }
 
-          if ($('input#live-view').is(':checked')) {
-            client.publish(APP_NAME + CMD_CAMERA + id, 'getimage');
+          // Plot the marks
+          plot(msg.objects, scale, scene_y_max, svgCanvas);
+        }
+        else if (topic.includes(SYS_PERCEBRO_STATUS)) {
+          if (msg == "running") {
+            camera_calibration.setMqttClient(client, APP_NAME + IMAGE_CALIBRATE + $("#sensor_id").val());
+            document.getElementById("lock_distortion_k1").style.visibility = 'visible';
+            updateElements(advanced_calibration_fields.map(e => e + "_wrapper"), "hidden", false);
           }
+        }
+        else if (topic.includes("event")) {
+          var etype = topic.split("/")[2];
+          if (etype == 'region') {
+            if (msg['metadata']?.fromSensor == true) {
+              drawSensor(msg['metadata'], msg['metadata']['title'], "child_sensor");
+            }
+            else {
+              drawRoi(msg['metadata'], msg['metadata']['uuid'], "child_roi");
+            }
+            var counts = msg['counts'];
+            var occupancy = 0;
+            if (counts && typeof counts === 'object') {
+              Object.keys(counts).forEach(function (category) {
+                var count = counts[category];
+                if (typeof count === 'number') {
+                  occupancy += count;
+                }
+              });
+              setROIColor(msg['metadata']['uuid'], occupancy);
+            }
 
-          // If ID contains special characters, selector $("#" + id) fails
-          $("[id='" + id + "']")
-            .stop()
-            .show()
-            .css("opacity", 1)
-            .animate({ opacity: 0.6 }, 5000, function () { })
-            .prevAll(".cam-offline").hide();
-        }
-      }
-      else if (topic.includes(IMAGE_CALIBRATE)) {
-        const image = "data:image/jpeg;base64," + msg.image;
-        const cameraMatrix = [
-          [$("#id_intrinsics_fx").val(), 0, $("#id_intrinsics_cx").val()],
-          [0, $("#id_intrinsics_fy").val(), $("#id_intrinsics_cy").val()],
-          [0, 0, 1]
-        ];
-        const distCoeffs = [
-          $("#id_distortion_k1").val(),
-          $("#id_distortion_k2").val(),
-          $("#id_distortion_p1").val(),
-          $("#id_distortion_p2").val(),
-          $("#id_distortion_k3").val()
-        ];
-        camera_calibration.updateCalibrationViews(image, cameraMatrix, distCoeffs);
-        $("#snapshot").trigger("click");
-      }
-      else if (topic.includes(DATA_CAMERA)) {
-        var id = topic.slice(topic.lastIndexOf('/') + 1);
-        $("#rate-" + id).text(msg.rate + " FPS");
-        $("#updated-" + id).text(msg.timestamp);
-      }
-      else if (topic.includes("/child/status")) {
-        var child = topic.slice(topic.lastIndexOf('/') + 1)
-        if (msg === 'connected') {
-          console.log(child + msg);
-          $("#mqtt_status_remote_" + child).addClass('connected')
-        }
-        else if (msg === 'disconnected') {
-          $("#mqtt_status_remote_" + child).removeClass('connected')
-        }
-      }
-      else if (topic.includes(SYS_AUTOCALIB_STATUS)) {
-        if (msg === 'running') {
-          if (document.getElementById("auto-camcalibration")) {
-            document.getElementById("auto-camcalibration").disabled = true;
-            document.getElementById("auto-camcalibration").title = "Initializing auto camera calibration";
-            document.getElementById("calib-spinner").classList.remove("hide-spinner");
+            var value = msg['value']
+            if (value) {
+              setSensorColor(msg['metadata']['title'], value, msg['metadata']['area']);
+            }
           }
-          client.publish(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id, "register");
+          else if (etype == 'tripwire') {
+            var trip = msg['metadata'];
+            trip.points[0] = metersToPixels(trip.points[0], scale, scene_y_max);
+            trip.points[1] = metersToPixels(trip.points[1], scale, scene_y_max);
+            newTripwire(trip, msg['metadata']['uuid'], "child_tripwire");
+          }
         }
-      }
-      else if (topic.includes(CMD_AUTOCALIB_SCENE + scene_id)) {
-        if (msg !== "register") {
-          if (document.getElementById("auto-camcalibration")) {
-            if (msg.status == "registering") {
-              document.getElementById("calib-spinner").classList.remove("hide-spinner");
-              document.getElementById("auto-camcalibration").title = "Registering the scene";
-            } else if (msg.status == "busy") {
-              document.getElementById("calib-spinner").classList.remove("hide-spinner");
+        else if (topic.includes("singleton")) {
+          plotSingleton(msg);
+        }
+        else if (topic.includes(IMAGE_CAMERA)) {
+          // Use native JS since jQuery.load() pukes on data URI's
+          if ($(".snapshot-image").length) {
+            var id = topic.split("camera/")[1];
+
+            img = document.getElementById(id);
+            if (img !== undefined && img !== null) {
+              img.setAttribute("src", "data:image/jpeg;base64," + msg.image);
+            }
+
+            if ($('input#live-view').is(':checked')) {
+              client.publish(APP_NAME + CMD_CAMERA + id, 'getimage');
+            }
+
+            // If ID contains special characters, selector $("#" + id) fails
+            $("[id='" + id + "']")
+              .stop()
+              .show()
+              .css("opacity", 1)
+              .animate({ opacity: 0.6 }, 5000, function () { })
+              .prevAll(".cam-offline").hide();
+          }
+        }
+        else if (topic.includes(IMAGE_CALIBRATE)) {
+          const image = "data:image/jpeg;base64," + msg.image;
+          const cameraMatrix = [
+            [$("#id_intrinsics_fx").val(), 0, $("#id_intrinsics_cx").val()],
+            [0, $("#id_intrinsics_fy").val(), $("#id_intrinsics_cy").val()],
+            [0, 0, 1]
+          ];
+          const distCoeffs = [
+            $("#id_distortion_k1").val(),
+            $("#id_distortion_k2").val(),
+            $("#id_distortion_p1").val(),
+            $("#id_distortion_p2").val(),
+            $("#id_distortion_k3").val()
+          ];
+          camera_calibration.updateCalibrationViews(image, cameraMatrix, distCoeffs);
+          $("#snapshot").trigger("click");
+        }
+        else if (topic.includes(DATA_CAMERA)) {
+          var id = topic.slice(topic.lastIndexOf('/') + 1);
+          $("#rate-" + id).text(msg.rate + " FPS");
+          $("#updated-" + id).text(msg.timestamp);
+        }
+        else if (topic.includes("/child/status")) {
+          var child = topic.slice(topic.lastIndexOf('/') + 1)
+          if (msg === 'connected') {
+            console.log(child + msg);
+            $("#mqtt_status_remote_" + child).addClass('connected')
+          }
+          else if (msg === 'disconnected') {
+            $("#mqtt_status_remote_" + child).removeClass('connected')
+          }
+        }
+        else if (topic.includes(SYS_AUTOCALIB_STATUS)) {
+          if (msg === 'running') {
+            if (document.getElementById("auto-camcalibration")) {
               document.getElementById("auto-camcalibration").disabled = true;
-              var button_message = (msg?.scene_id == scene_id) ? ("Scene updated, Registering the scene") :
-                ("Unavailable, registering scene : " + msg?.scene_name)
-              document.getElementById("auto-camcalibration").title = button_message;
-            } else if (msg.status == "success") {
-              document.getElementById("calib-spinner").classList.add("hide-spinner");
-              if (calibration_strategy == "Markerless") {
-                document.getElementById("auto-camcalibration").title = "Go to 3D view for Markerless auto camera calibration.";
+              document.getElementById("auto-camcalibration").title = "Initializing auto camera calibration";
+              document.getElementById("calib-spinner").classList.remove("hide-spinner");
+            }
+            client.publish(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id, "register");
+          }
+        }
+        else if (topic.includes(CMD_AUTOCALIB_SCENE + scene_id)) {
+          if (msg !== "register") {
+            if (document.getElementById("auto-camcalibration")) {
+              if (msg.status == "registering") {
+                document.getElementById("calib-spinner").classList.remove("hide-spinner");
+                document.getElementById("auto-camcalibration").title = "Registering the scene";
+              } else if (msg.status == "busy") {
+                document.getElementById("calib-spinner").classList.remove("hide-spinner");
+                document.getElementById("auto-camcalibration").disabled = true;
+                var button_message = (msg?.scene_id == scene_id) ? ("Scene updated, Registering the scene") :
+                  ("Unavailable, registering scene : " + msg?.scene_name)
+                document.getElementById("auto-camcalibration").title = button_message;
+              } else if (msg.status == "success") {
+                document.getElementById("calib-spinner").classList.add("hide-spinner");
+                if (calibration_strategy == "Markerless") {
+                  document.getElementById("auto-camcalibration").title = "Go to 3D view for Markerless auto camera calibration.";
+                }
+                else {
+                  document.getElementById("auto-camcalibration").disabled = false;
+                  document.getElementById("auto-camcalibration").title = "Click to calibrate the camera automatically";
+                }
+              } else if (msg.status == "re-register") {
+                client.publish(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id, "register");
+              } else {
+                document.getElementById("calib-spinner").classList.add("hide-spinner");
+                document.getElementById("auto-camcalibration").title = msg.status;
               }
-              else {
-                document.getElementById("auto-camcalibration").disabled = false;
-                document.getElementById("auto-camcalibration").title = "Click to calibrate the camera automatically";
-              }
-            } else if (msg.status == "re-register") {
-              client.publish(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id, "register");
-            } else {
-              document.getElementById("calib-spinner").classList.add("hide-spinner");
-              document.getElementById("auto-camcalibration").title = msg.status;
             }
           }
         }
-      }
-      else if (topic.includes(DATA_AUTOCALIB_CAM_POSE)) {
-        if (msg.error === "False") {
-          camera_calibration.clearCalibrationPoints();
-          camera_calibration.addAutocalibrationPoints(msg);
+        else if (topic.includes(DATA_AUTOCALIB_CAM_POSE)) {
+          if (msg.error === "False") {
+            camera_calibration.clearCalibrationPoints();
+            camera_calibration.addAutocalibrationPoints(msg);
+          }
+          else {
+            alert(`${msg.message} Please try again.\n\nIf you keep getting this error, please check the documentation for known issues.`);
+          }
+
+          document.getElementById("auto-camcalibration").disabled = false;
+          document.getElementById("reset_points").disabled = false;
+          document.getElementById("top_save").disabled = false;
         }
-        else {
-          alert(`${msg.message} Please try again.\n\nIf you keep getting this error, please check the documentation for known issues.`);
-        }
+      });
 
-        document.getElementById("auto-camcalibration").disabled = false;
-        document.getElementById("reset_points").disabled = false;
-        document.getElementById("top_save").disabled = false;
-      }
+      client.on('error', function (e) {
+        console.log("MQTT error: " + e);
+      });
+
+      $("#disconnect").on("click", function () {
+        sessionStorage.setItem("connectToMqtt", false);
+        client.end();
+      });
+
+      var topic = APP_NAME + CMD_CAMERA + $("#sensor_id").val();
+      $("#snapshot").on("click", function () {
+        client.publish(topic, 'getcalibrationimage');
+      });
+      $("#auto-camcalibration").on("click", function () {
+        client.publish(topic, 'localize');
+        document.getElementById("auto-camcalibration").disabled = true;
+        document.getElementById("reset_points").disabled = true;
+        document.getElementById("top_save").disabled = true;
+      });
     });
 
-    client.on('error', function (e) {
-      console.log("MQTT error: " + e);
-    });
-
-    $("#disconnect").on("click", function () {
-      sessionStorage.setItem("connectToMqtt", false);
-      client.end();
-    });
-
-    var topic = APP_NAME + CMD_CAMERA + $("#sensor_id").val();
-    $("#snapshot").on("click", function () {
-      client.publish(topic, 'getcalibrationimage');
-    });
-    $("#auto-camcalibration").on("click", function () {
-      client.publish(topic, 'localize');
-      document.getElementById("auto-camcalibration").disabled = true;
-      document.getElementById("reset_points").disabled = true;
-      document.getElementById("top_save").disabled = true;
-    });
-  });
-
-      // Connect by default
+    // Connect by default
     var connectToMqtt = sessionStorage.getItem("connectToMqtt");
     if (connectToMqtt === null || connectToMqtt) {
-        $("#connect").trigger("click");
-        if ($("#snapshot").length != 0) {
-          $("#snapshot").trigger("click");
-        }
+      $("#connect").trigger("click");
+      if ($("#snapshot").length != 0) {
+        $("#snapshot").trigger("click");
+      }
     }
 
   } else {
-      console.log("Neither port is open.");
+    console.log("Neither port is open.");
   }
 }
 
@@ -619,7 +619,7 @@ function stringifySingletonColorRange() {
 
   var input_min = document.querySelectorAll("#singleton_sectors > input[id$='_min']");
 
-  for(const input_ele of input_min){
+  for (const input_ele of input_min) {
     color_ranges.push({
       color: input_ele.className.split("_")[0],
       color_min: parseInt(input_ele.value)
@@ -853,7 +853,7 @@ function newTripwire(e, index, type = "tripwire") {
     line.setAttribute('y1', e.points[0][1])
     line.setAttribute('x2', e.points[1][0])
     line.setAttribute('y2', e.points[1][1])
-    document.getElementById(i).querySelectorAll('circle').forEach(function(c, idx){
+    document.getElementById(i).querySelectorAll('circle').forEach(function (c, idx) {
       c.setAttribute('cx', e.points[idx][0]);
       c.setAttribute('cy', e.points[idx][1]);
     })
@@ -942,7 +942,6 @@ function find_duplicates(curr_roi) {
 
   return Array.from(duplicates);
 }
-
 
 function updateArrow(group) {
   var arrow = group.select(".arrow");
@@ -1052,7 +1051,7 @@ function setupCalibrationType() {
 }
 
 function updateElements(elements, action, condition) {
-  elements.forEach(function(e) {
+  elements.forEach(function (e) {
     const element = document.getElementById(e);
     if (element) {
       document.getElementById(e)[action] = condition;
@@ -1067,9 +1066,9 @@ function setupChildSceneType() {
   document.getElementById("child_wrapper")['hidden'] = !isChildLocal;
 
   var remoteChildElements = ["child_name_wrapper", "remote_child_id_wrapper", "host_name_wrapper",
-                             "mqtt_username_wrapper", "mqtt_password_wrapper"];
+    "mqtt_username_wrapper", "mqtt_password_wrapper"];
   var elementsRequired = ["id_child_name", "id_remote_child_id", "id_host_name", "id_mqtt_username",
-                           "id_mqtt_password"];
+    "id_mqtt_password"];
 
   updateElements(remoteChildElements, 'hidden', isChildLocal);
   updateElements(elementsRequired, 'required', !isChildLocal);
@@ -1356,7 +1355,7 @@ function drawRoi(e, index, type) {
       name_text.setAttribute('x', center[0]);
       name_text.setAttribute('y', center[1]);
       hierarchy_text.setAttribute('x', center[0]);
-      hierarchy_text.setAttribute('y', center[1]+15);
+      hierarchy_text.setAttribute('y', center[1] + 15);
     }
     name_text.textContent = e.title;
     hierarchy_text.textContent = e.from_child_scene;
@@ -1410,8 +1409,8 @@ function drawRoi(e, index, type) {
           "for": "input-" + i
         });
 
-        $("#form-" + i).find(".roi-topic > label").text("Topic:  ")
-        $("#form-" + i).find(".roi-topic > .topic-text")
+      $("#form-" + i).find(".roi-topic > label").text("Topic:  ")
+      $("#form-" + i).find(".roi-topic > .topic-text")
         .text(APP_NAME + "/event/region/"
           + scene_id + "/"
           + index + "/count");
@@ -1430,7 +1429,7 @@ function drawRoi(e, index, type) {
             navigator.clipboard.writeText(text);
           }
         });
-    });
+      });
     }
     else {
       var center = polyCenter(roi_points);
@@ -1447,7 +1446,7 @@ function drawSensor(sensor, index, type) {
   if (type === "child_sensor" && document.getElementById(i)) {
     var name_text = document.getElementById(i).querySelector('#name');
     var hierarchy_text = document.getElementById(i).querySelector('#hierarchy');
-    if (sensor.x && sensor.y){
+    if (sensor.x && sensor.y) {
       var p = metersToPixels([sensor.x, sensor.y], scale, scene_y_max);
       sensor.x = p[0];
       sensor.y = p[1];
@@ -1457,7 +1456,7 @@ function drawSensor(sensor, index, type) {
       name_text.setAttribute('x', sensor?.x);
       name_text.setAttribute('y', sensor?.y - 7);
       hierarchy_text.setAttribute('x', sensor?.x);
-      hierarchy_text.setAttribute('y', sensor?.y+15);
+      hierarchy_text.setAttribute('y', sensor?.y + 15);
     }
     if (sensor.area === "circle") {
       var outer_circle = document.querySelector('#' + i + ' > .area')
@@ -1580,7 +1579,7 @@ function setupSceneRotationTranslationFields(event = null) {
   }
 
   var rotation_translation_elements = ["rotation_x_wrapper", "rotation_y_wrapper", "rotation_z_wrapper",
-                                      "translation_x_wrapper", "translation_y_wrapper", "translation_z_wrapper"];
+    "translation_x_wrapper", "translation_y_wrapper", "translation_z_wrapper"];
   updateElements(rotation_translation_elements, "hidden", scene_rotation_translation_config);
 }
 
@@ -1880,14 +1879,14 @@ $(document).ready(function () {
       broker = broker.replace("/mqtt", ":1884");
     }
 
-  $("#broker-address").text(host);
-  checkBrokerConnections()
-  .then(() => {
-    console.log("Broker connections checked");
-  })
-  .catch((error) => {
-    console.log("An error occurred:", error);
-  });
+    $("#broker-address").text(host);
+    checkBrokerConnections()
+      .then(() => {
+        console.log("Broker connections checked");
+      })
+      .catch((error) => {
+        console.log("An error occurred:", error);
+      });
   }
 
   $("input[name='area']").on("focus change", function () {
@@ -1962,7 +1961,7 @@ $(document).ready(function () {
 
   if (document.getElementById("manage_child")) {
     setupChildSceneType();
-    var childTypes=document.querySelectorAll('input[name="child_type"]');
+    var childTypes = document.querySelectorAll('input[name="child_type"]');
     childTypes.forEach(radioButton => {
       radioButton.addEventListener('change', setupChildSceneType)
     });
@@ -2056,825 +2055,4 @@ $(document).ready(function () {
     }
     return true; // Normally submit the form
   });
-
-  // Call model-directory GET API (load) to get the list of files in the directory
-  // path format - path/to/directory/
-  function loadModelDirectoryFiles(path, folder_name) {
-    return new Promise((resolve, reject) => {
-      let url = MODEL_DIRECTORY_API
-
-      var formData = new FormData();
-      formData.append('path', path);
-      formData.append('action', 'load');
-      formData.append('folder_name', folder_name);
-
-      const queryParams = new URLSearchParams(formData).toString();
-      url += `?${queryParams}`;
-
-      $.ajax({
-        url: url,
-        headers: {
-          'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()
-        },
-        type: 'GET',
-        data: null,
-        processData: false,
-        contentType: false,
-        success: function (response) {
-          resolve(response);
-        },
-        error: function (xhr, status, error) {
-          reject(`${xhr.responseText || status}`);
-        }
-      });
-    })
-  };
-
-  // Call model-directory GET API (check) to check file existence
-  // path format - path/to/directory/
-  function checkDirectoryExistence(path, folder_name) {
-    return new Promise((resolve, reject) => {
-      let url = MODEL_DIRECTORY_API
-
-      var formData = new FormData();
-      formData.append('path', path);
-      formData.append('action', 'check');
-      formData.append('folder_name', folder_name);
-
-      const queryParams = new URLSearchParams(formData).toString();
-      url += `?${queryParams}`;
-
-      $.ajax({
-        url: url,
-        headers: {
-          'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()
-        },
-        type: 'GET',
-        data: null,
-        processData: false,
-        contentType: false,
-        success: function (response) {
-          if (response === "False" || response === false) {
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        },
-        error: function (xhr, status, error) {
-          reject(`${xhr.responseText || status}`);
-        }
-      });
-    })
-  }
-
-  // Call model-directory POST API (create) to create a new folder
-  // path format - path/to/directory/
-  function createModelDirectory(path, new_folder_name) {
-    return new Promise((resolve, reject) => {
-      let url = MODEL_DIRECTORY_API
-
-      var formData = new FormData();
-      formData.append('path', path);
-      formData.append('action', 'create');
-      formData.append('folder_name', new_folder_name);
-
-      $.ajax({
-        url: url,
-        headers: {
-          'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()
-        },
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function (response, status, xhr) {
-          resolve(response);
-        },
-        error: function (xhr, status, error) {
-          reject(`${xhr.responseText || status}`);
-        }
-      });
-    })
-  }
-
-  // Call model-directory POST API (upload) to upload file
-  // path format - path/to/directory/
-  // uploaded_file - file object
-  function uploadModelDirectoryFile(path, uploaded_file) {
-    return new Promise((resolve, reject) => {
-      let url = MODEL_DIRECTORY_API
-
-      var formData = new FormData();
-      formData.append('path', path);
-      formData.append('action', 'upload');
-      formData.append('file', uploaded_file);
-
-      $.ajax({
-        url: url,
-        headers: {
-          'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()
-        },
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        beforeSend: function () { // Show loading spinner
-          showLoadingSpinner();
-        },
-        success: function (response) {
-          resolve(response);
-        },
-        error: function (xhr, status, error) {
-          reject(`${xhr.responseText || status}`);
-        },
-        complete: function () { // Hide loading spinner
-          hideLoadingSpinner();
-        }
-      });
-    })
-  }
-
-  // Call model-directory POST API (extract) to extract a file
-  // path format - path/to/directory/
-  // uploaded_file - file object (zip file)
-  function extractModelDirectoryFile(path, uploaded_file) {
-    return new Promise((resolve, reject) => {
-      let url = MODEL_DIRECTORY_API
-
-      var formData = new FormData();
-      formData.append('path', path);
-      formData.append('action', 'extract');
-      formData.append('file', uploaded_file);
-
-      $.ajax({
-        url: url,
-        headers: {
-          'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()
-        },
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        beforeSend: function () {
-          showLoadingSpinner();
-        },
-        success: function (response) {
-          resolve(response);
-        },
-        error: function (xhr, status, error) {
-          reject(`${xhr.responseText || status}`);
-        },
-        complete: function () {
-          hideLoadingSpinner();
-        }
-      });
-    })
-  }
-
-  // Call model-directory DELETE API to delete a directory
-  // path format - path/to/directory/
-  function deleteModelDirectory(path, folder_name) {
-    return new Promise((resolve, reject) => {
-      let url = MODEL_DIRECTORY_API
-
-      var formData = new FormData();
-      formData.append('path', path);
-      formData.append('folder_name', folder_name);
-
-      $.ajax({
-        url: url,
-        headers: {
-          'X-CSRFToken': $("input[name=csrfmiddlewaretoken]").val()
-        },
-        type: 'DELETE',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function (response) {
-          resolve(response);
-        },
-        error: function (xhr, status, error) {
-          reject(`${xhr.responseText || status}`);
-        }
-      });
-    })
-  }
-
-  // Display a notice indicating that the action was successful
-  function successModelDirectoryNotice(message) {
-    const $successNotice = $(".model-directory-success-notice");
-    $successNotice.find(".notice-success-text").text(message);
-    $successNotice.removeClass("d-none");
-    $successNotice.removeClass("notice");
-    void $successNotice[0].offsetWidth; // Trigger reflow to restart the animation
-    $successNotice.addClass("notice");
-  }
-
-  // Display a notice indicating that the action encountered an error
-  function dangerModelDirectoryNotice(message) {
-    const $dangerNotice = $(".model-directory-danger-notice");
-    $dangerNotice.find(".notice-danger-text").text(message);
-    $dangerNotice.removeClass("d-none");
-    $dangerNotice.removeClass("notice");
-    void $dangerNotice[0].offsetWidth; // Trigger reflow to restart the animation
-    $dangerNotice.addClass("notice");
-  }
-
-  function showLoadingSpinner() {
-    $(".loading-background-container").removeClass("d-none");
-  }
-  function hideLoadingSpinner() {
-    $(".loading-background-container").addClass("d-none");
-  }
-
-  function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  // Function to sort the model directory alphabetically
-  function sortModelDirectoryAlphabetically($container) {
-    const $elements = $container.children("ul")
-
-    $elements.sort(function (a, b) {
-      const $a = $(a).children('li').first();
-      const $b = $(b).children('li').first();
-
-      const aIsDirectory = $a.hasClass('is-directory');
-      const bIsDirectory = $b.hasClass('is-directory');
-
-      if (aIsDirectory && !bIsDirectory) {
-        return -1; // a is a directory and b is a file
-      } else if (!aIsDirectory && bIsDirectory) {
-        return 1; // a is a file and b is a directory
-      } else {
-        const aText = $a.attr("key").toLowerCase();
-        const bText = $b.attr("key").toLowerCase();
-        return aText.localeCompare(bText); // Both are the same type, sort alphabetically
-      }
-    })
-
-    $elements.detach().appendTo($container);
-  }
-
-  // Function to show the prompt modal to confirm the action
-  function showModelPromptModal(action, path, filenames) {
-    return new Promise((resolve, reject) => {
-      // Error handling: Check if filenames is undefined
-      if (typeof filenames === 'undefined') {
-        return reject('Filenames variable is unassigned or undefined');
-      }
-      // No files to overwrite/delete -> no need prompt
-      else if (filenames === null) {
-        return resolve(true)
-      }
-      // Multiple files to overwrite/delete -> join with <br> for better readability
-      if (Array.isArray(filenames)) {
-        if (filenames.length > 0) {
-          filenames = filenames.join('<br>');
-        }
-        // No files to overwrite/delete -> no need prompt
-        else {
-          return resolve(true)
-        }
-      }
-      // No files to overwrite/delete -> no need prompt
-      else if (filenames.toString() === "") {
-        return resolve(true)
-      }
-      // Single file to overwrite/delete -> convert to string
-      else {
-        filenames = filenames.toString();
-      }
-
-      // Set the path to "root" if it is empty
-      if (path == "") {
-        path = "root"
-      }
-
-      const $modal = $(".model-prompt-container");
-      const $confirmBtn = $modal.find(".prompt-confirm-button");
-      const $cancelBtn = $modal.find(".prompt-cancel-button");
-      const $message = $modal.find(".prompt-body");
-
-      // Construct the message to be displayed in the modal
-      var htmlMessage = '<b>Are you sure want to ' + action + ' the following files?</b><br>' +
-        '<br>' +
-        '<b>Directory:</b> ' + path + '<br>' +
-        '<br>' +
-        '<b>Files:</b><br>'
-        + filenames;
-      $message.html(htmlMessage)
-
-      // Show the modal
-      $modal.css("display", "block");
-
-      // Event listener for confirm button
-      $confirmBtn.click(() => {
-        $modal.css("display", "none");
-        resolve(true); // Resolve the promise with true
-      });
-
-      // Event listener for cancel button
-      $cancelBtn.click(() => {
-        $modal.css("display", "none");
-        resolve(false); // Resolve the promise with true
-      })
-    });
-  }
-
-
-  // Read the contents of the directory recursively and return the list of files and directories
-  async function readUploadDirectoryRecursively(directoryReader) {
-    return new Promise((resolve, reject) => {
-      const directoryContents = [];
-      directoryReader.readEntries(async function (entries) {
-        for (const entry of entries) {
-          directoryContents.push(entry);
-          if (entry.isDirectory) {
-            const subDirectoryReader = entry.createReader();
-            const subDirectoryContents = await readUploadDirectoryRecursively(subDirectoryReader);
-            directoryContents.push(...subDirectoryContents);
-          }
-        }
-        resolve(directoryContents);
-      })
-    });
-  }
-
-  // Sync the directory with the uploaded files
-  function successUploadToDirectory(htmlContent, fileSet, $directory) {
-
-    // Remove existing elements that are in the appended_set
-    $directory.children("ul").each(function () {
-      const $folder = $(this).children('li').first();
-      if (fileSet.includes($folder.attr("key"))) {
-        $(this).remove();
-      }
-    });
-
-    // Append the new files to the directory
-    $directory.append(htmlContent);
-    $directory.removeClass('folder-collapse');
-    sortModelDirectoryAlphabetically($directory);
-  }
-
-  // Expand and collapse directory
-  $(".tree-explorer").on("click", "li", function (event) {
-    const $directory = $(this).closest("ul");
-    $directory.toggleClass('folder-collapse');
-  });
-
-  // Insert input field for naming the folder
-  $(".tree-explorer").on("click", "li i.trigger-add-folder", function (event) {
-    preventDefaults(event);
-
-    const $directory = $(this).closest("ul");
-
-    // Get the css value of the current directory
-    const $folder = $(this).closest("li");
-    var leftIndent = parseInt($folder.css("padding-left"), 10) + DIRECTORY_LEFT_INDENT;
-    leftIndent = leftIndent + "px";
-    const classList = $folder.attr("class");
-
-    // Expand the directory
-    $directory.removeClass('folder-collapse');
-
-    // Append an input field to the current directory's <ul> to create a new subdirectory
-    const $inputUl = $('<ul id="new-folder"><li style="background-color:#EBEEFF;padding-left:' + leftIndent + '" class="' + classList +
-      '"><input placeholder="New Folder Name" type="text" class="new-folder-name-input"/></li></ul>');
-    $directory.append($inputUl);
-
-    // Set focus to the newly appended input field for entering the new folder name
-    $inputUl.find("li input").focus();
-  })
-
-  // Filter input to allow only non-special characters (like Windows directory)
-  $(".tree-explorer").on("input", "ul#new-folder input", function () {
-    // Define a regular expression to match disallowed characters
-    const disallowedCharacters = /[\\/:*?"<>|]/g;
-
-    var currentValue = $(this).val();
-    // Replace disallowed characters with an empty string
-    if (disallowedCharacters.test(currentValue)) {
-      dangerModelDirectoryNotice("Special characters \\ / : * ? \" < > | are not allowed in the folder name.");
-    }
-    var sanitizedValue = currentValue.replace(disallowedCharacters, '');
-    $(this).val(sanitizedValue);
-  });
-
-  // Create new folder at the directory once left the input field
-  $(".tree-explorer").on("blur", "ul#new-folder input", async function () {
-    // Get the path to the directory where the new folder is to be created
-    const $directory = $(this).closest('ul').parent('ul');
-    const directoryName = $directory.attr("path") || ''; // eg. path/to/directory/
-    const $folder = $directory.children('li').first();
-    const folderName = $folder.attr("key") || '';
-    var path = directoryName + folderName;
-
-    if (path === undefined || path === "undefined") {
-      path = "";
-    }
-    else if (path.startsWith('/')) {
-      path = path.substring(1);
-    }
-
-    // Get the name of the new folder
-    const newFolderName = $(this).val();
-    var $inputUl = $(this).closest('ul');
-    $inputUl.remove();
-
-    // Create new folder if input is not null
-    if (newFolderName !== '') {
-      // Create the new folder
-      await createModelDirectory(path, newFolderName)
-        // If the folder is successfully created
-        .then((response) => {
-          // Display a success notice
-          successModelDirectoryNotice(response);
-
-          // Load the files in the directory
-          return loadModelDirectoryFiles(path, newFolderName);
-        })
-        // If the directory files are successfully loaded
-        .then((response) => {
-          // Append the new folder to the directory
-          // Expand the folder and sort the directory alphabetically
-          $directory.append(response);
-          $directory.removeClass('folder-collapse');
-          sortModelDirectoryAlphabetically($directory);
-        })
-        // Catch any errors that occur during the process
-        .catch((error) => {
-          console.error(error)
-          dangerModelDirectoryNotice(error);
-        });
-    }
-  })
-
-  // Copy MODEL URL path to clipboard
-  $(".tree-explorer").on("click", "li i.trigger-copy-path", function (event) {
-    preventDefaults(event);
-
-    const urlPath = $(this).closest("li").attr("title"); // MODEL_URL
-
-    navigator.clipboard.writeText(urlPath).then(function () {
-      successModelDirectoryNotice("Model URL path copied to clipboard.");
-    }, function (err) {
-      dangerModelDirectoryNotice("Could not copy path to clipboard: " + err);
-    });
-  })
-
-  // Insert input file field for uploading file
-  $(".tree-explorer").on("click", "li i.trigger-upload-file", function (event) {
-    preventDefaults(event);
-
-    // Get the path from the root to the current directory (e.g., "path/to/")
-    const $directory = $(this).closest("ul");
-
-    // Add an input field to the current directory's <ul> to upload a file
-    const $inputUl = $('<ul id="upload-folder"><input hidden type="file" class="upload-file-input"/></ul>');
-    $directory.append($inputUl);
-
-    // Open upload file dialog
-    $inputUl.find("input").click();
-  })
-
-  // Upload file to the directory
-  $(".tree-explorer").on("change cancel", "ul#upload-folder input[type='file']", async function () {
-
-    // Extract the uploaded file
-    const fileInput = $(this);
-    const uploaded_file = fileInput[0].files[0];
-
-    // Get the path to the directory where the new folder is to be created
-    const $directory = $(this).closest('ul').parent('ul');
-    const $inputUl = $(this).closest('ul');
-    $inputUl.remove();
-
-    // Upload file if input is not null
-    const fileList = [];
-    const directoryName = $directory.attr("path") || ''; // eg. path/to/directory/
-    const $folder = $directory.children('li').first();
-    const folderName = $folder.attr("key") || '';
-    var path = directoryName + folderName;
-
-    if (path === undefined || path === "undefined") {
-      path = '';
-    }
-    else if (path.startsWith('/')) {
-      path = path.substring(1);
-    }
-
-    if (uploaded_file) {
-      try {
-        // zip file case
-        if (uploaded_file.type === 'application/zip' || uploaded_file.name.endsWith('.zip')) {
-          fileList.push(uploaded_file.name.split('.zip')[0]);
-        }
-        // Normal file case
-        else {
-          fileList.push(uploaded_file.name);
-        }
-
-        // Check if the file is already existed in the directory
-        const fileOverwrite = [];
-        await Promise.all(fileList.map(async (file) => {
-          const response = await checkDirectoryExistence(path, file);
-          if (response) {
-            fileOverwrite.push(file);
-          }
-        }));
-
-        // Overwrite consent prompt
-        if (fileOverwrite.length > 0) {
-          const promptResponse = await showModelPromptModal("overwrite", path, fileOverwrite)
-          if (promptResponse) {
-            const deletePromises = fileOverwrite.map(file => deleteModelDirectory(path, file));
-            await Promise.all(deletePromises)
-            successModelDirectoryNotice("Files are successfully deleted");
-          }
-          else {
-            throw new Error("User canceled the overwrite operation");
-          }
-        }
-
-        const fileSet = [];
-        var message;
-        // If user consent to overwrite the file
-        if (uploaded_file.name.endsWith('.zip')) { // Extract zip file
-          const zipName = uploaded_file.name.split('.zip')[0];
-          fileSet.push(zipName)
-          await createModelDirectory(path, zipName);
-          var extractedPath = path;
-          if(extractedPath !== "" && extractedPath[-1] !== "/") {
-            extractedPath += "/";
-          }
-          extractedPath += zipName;
-          message = await extractModelDirectoryFile(extractedPath, uploaded_file)
-        }
-        else { // Upload normal file
-          fileSet.push(uploaded_file.name)
-          message = await uploadModelDirectoryFile(path, uploaded_file)
-        }
-
-        // Display a success notice
-        successModelDirectoryNotice(message);
-
-        const loadPromises = fileSet.map(file => loadModelDirectoryFiles(path, file));
-        const loadResponses = await Promise.all(loadPromises);
-
-        let htmlContent = '';
-
-        // Load all directory content
-        loadResponses.forEach((response) => {
-          htmlContent += response;
-        });
-
-        // Sync the directory with the uploaded files
-        successUploadToDirectory(htmlContent, fileSet, $directory);
-      }
-      catch (error) {
-        console.error(error);
-        dangerModelDirectoryNotice(error);
-        return;
-      }
-    }
-    else {
-      console.error("No file is uploaded");
-      dangerModelDirectoryNotice("No file is uploaded");
-    }
-  })
-
-  // Drag and drop upload file
-  $(".tree-explorer").on("drop", "ul", async function (event) {
-    preventDefaults(event);
-
-    // Get the path to the directory where the new content is to be uploaded
-    var $droppedUl = $(this);
-    const $folder = $droppedUl.children('li').first();
-    var path = $droppedUl.attr("path") || ''; // eg. path/to/directory/
-
-    // If is folder, append the folder to the directory tree
-    if ($folder.hasClass("is-directory")) {
-      path += $folder.attr("key") || '';
-    }
-    else if ($folder.hasClass("is-file")) {
-      $droppedUl = $droppedUl.parent('ul');
-    }
-
-    if (path === undefined || path === "undefined") {
-      path = "";
-    }
-    else if (path[0] === '/') {
-      path = path.substring(1);
-    }
-
-    const droppedItems = [];
-    const items = event.originalEvent.dataTransfer.items;
-    for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
-      const item = items[itemIndex].webkitGetAsEntry();
-      if (item) {
-        droppedItems.push(item);
-      }
-    }
-
-    const droppedFiles = event.originalEvent.dataTransfer.files
-    var droppedNumber = 0;
-    if (droppedItems.length === droppedFiles.length) {
-      droppedNumber = droppedFiles.length;
-    }
-    else {
-      console.error("Number of items and files are not equal");
-      dangerModelDirectoryNotice("Number of items and files are not equal");
-      return;
-    }
-
-    if (droppedNumber <= 0) {
-      dangerModelDirectoryNotice("No file is dropped");
-      return;
-    }
-    try {
-      for (var droppedIndex = 0; droppedIndex < droppedNumber; droppedIndex++) {
-        const item = droppedItems[droppedIndex]
-        const file = droppedFiles[droppedIndex];
-        const fileList = [];
-
-        if (item.isDirectory) { // Directory case
-          fileList.push(item.name);
-        }
-        else if (item.isFile) { // File case
-          // ZIP file
-          if (file.type === 'application/zip' || file.name.endsWith('.zip')) {
-            fileList.push(file.name.split('.zip')[0]);
-          } else {
-            fileList.push(file.name);
-          }
-        }
-        else {
-          throw new Error("Unknown file type");
-        }
-
-        // Check if the file is already existed in the directory
-        const fileOverwrite = [];
-        await Promise.all(fileList.map(async (file) => {
-          const response = await checkDirectoryExistence(path, file);
-          if (response) {
-            fileOverwrite.push(file);
-          }
-        }));
-
-        // Overwrite consent prompt
-        if (fileOverwrite.length > 0) {
-          const promptResponse = await showModelPromptModal("overwrite", path, fileOverwrite)
-          if (promptResponse) {
-            const deletePromises = fileOverwrite.map(file => deleteModelDirectory(path, file));
-            await Promise.all(deletePromises)
-            successModelDirectoryNotice("Files are successfully deleted");
-          }
-          else {
-            dangerModelDirectoryNotice("User canceled the overwrite operation");
-            continue
-          }
-        }
-
-        // If user consent to overwrite the file
-        const fileSet = [];
-        if (item.isDirectory) {
-          fileSet.push(item.name);
-          await createModelDirectory(path, item.name);
-
-          const directoryReader = item.createReader();
-          const fileContents = [];
-          const entries = await readUploadDirectoryRecursively(directoryReader);
-
-          // Process each entry in the directory
-          for (const entry of entries) {
-            if (entry.isFile) {
-              fileContents.push(entry);
-            }
-            else if (entry.isDirectory) {
-              const entryPath = entry.fullPath.startsWith('/') ? entry.fullPath.substring(1) : entry.fullPath;
-              await createModelDirectory(path, entryPath);
-            }
-            else {
-              throw new Error("Unknown file type");
-            }
-          }
-
-          for (const fileEntry of fileContents) {
-            // Relative file path to the uploaded_directory
-            let entryPath = fileEntry.fullPath.split(fileEntry.name)[0];
-            let completePath = path + entryPath;
-            if (completePath[0] === '/') {
-              completePath = completePath.substring(1);
-            }
-
-            await new Promise((resolve, reject) => {
-              fileEntry.file(async file => {
-                try {
-                  await uploadModelDirectoryFile(completePath, file);
-                  resolve(); // Resolve the promise after the file is uploaded
-                } catch (error) {
-                  reject(error);
-                }
-              });
-            })
-          }
-
-          successModelDirectoryNotice("Directory is successfully uploaded");
-        }
-        else {
-          var message;
-          if (item.name.endsWith('.zip')) { // Extract zip file
-            const zipName = file.name.split('.zip')[0];
-            fileSet.push(zipName)
-            await createModelDirectory(path, zipName);
-            var extractedPath = path;
-            if(extractedPath !== "" && extractedPath[-1] !== "/") {
-              extractedPath += "/";
-            }
-            extractedPath += zipName;
-            message = await extractModelDirectoryFile(extractedPath, file)
-          }
-          else { // Upload normal file
-            fileSet.push(file.name)
-            message = await uploadModelDirectoryFile(path, file)
-          }
-          successModelDirectoryNotice(message);
-        }
-
-        const loadPromises = fileSet.map(file => loadModelDirectoryFiles(path, file));
-        const loadResponses = await Promise.all(loadPromises);
-
-        let htmlContent = '';
-
-        // Load all directory content
-        loadResponses.forEach((response) => {
-          htmlContent += response;
-        });
-
-        // Sync the directory with the uploaded files
-        successUploadToDirectory(htmlContent, fileSet, $droppedUl);
-      }
-    } catch (error) {
-      console.error(error);
-      dangerModelDirectoryNotice(error);
-      return;
-    }
-  });
-
-  // Delete the target file/folder
-  $(".tree-explorer").on("click", "li i.trigger-delete-folder", async function (event) {
-    preventDefaults(event);
-
-    // Get the path from the root to the current directory (e.g., "path/to")
-    var $directory = $(this).closest("ul");
-    var directoryName = $directory.attr("path") || '';
-
-    // Get the name where a new folder/file is intended to be deleted (e.g., "target")
-    var $folder = $(this).closest("li");
-    var target = $folder.attr("key") || '';
-
-    // Construct the full path to the target (e.g., "path/to/target")
-    var path = directoryName + target;
-
-    if (path === undefined || path === "undefined") {
-      path = "";
-    }
-    else if (path.startsWith('/')) {
-      path = path.substring(1);
-    }
-
-    await showModelPromptModal('delete', directoryName, target)
-      .then((response) => {
-        if (response)
-          return deleteModelDirectory(directoryName, target)
-        else
-          return Promise.reject("User canceled the delete operation");
-      })
-      .then((response) => {
-        $directory.remove();
-        successModelDirectoryNotice(response);
-      })
-      .catch((error) => {
-        console.error(error);
-        dangerModelDirectoryNotice(error);
-        return
-      })
-  })
-
-  // Prevent default action for dragenter, dragover, and dragleave events
-  $(".tree-explorer").on("dragenter dragover dragleave", "ul", function (event) {
-    preventDefaults(event);
-  })
-
-  // Highlight the directory contents when mouse hover
-  $(".tree-explorer").on("mouseenter", "li", function () {
-    $(this).siblings().css("background-color", "#EBEEFF");
-  });
-  $(".tree-explorer").on("mouseleave", "li", function () {
-    $(this).siblings().css("background-color", "");
-  });
-
 });
