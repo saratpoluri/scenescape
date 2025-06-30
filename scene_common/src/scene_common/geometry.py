@@ -18,6 +18,7 @@ from scipy.spatial.transform import Rotation
 from fast_geometry import Point, Line, Rectangle, Polygon, Size
 
 DEFAULTZ = 0
+ROI_Z_HEIGHT = 0.25
 
 # Re-export modules from fast geometry as our own
 __all__ = ['Point', 'Line', 'Rectangle', 'Size']
@@ -42,6 +43,9 @@ class Region:
     self.polygon = None
     self.singleton_type = None
     self.updateSingletonType(info)
+    self.compute_intersection = False
+    self.region_height = ROI_Z_HEIGHT
+    self.buffer_size = 0.0
     return
 
   def updatePoints(self, newPoints):
@@ -91,13 +95,11 @@ class Region:
     return
   
   def createMesh(self):
-    ROI_Z_TRANSLATION = 0
-    ROI_Z_HEIGHT = 0.25
-    roi_pts = [[pt.x, pt.y] + [ROI_Z_TRANSLATION] for pt in self.points]
-    roi_pts += [[pt.x, pt.y] + [ROI_Z_TRANSLATION + ROI_Z_HEIGHT] for pt in self.points]
+    roi_pts = [[pt.x, pt.y, 0] for pt in self.points]
+    roi_pts += [[pt.x, pt.y] + [self.region_height] for pt in self.points]
     obb = o3d.geometry.OrientedBoundingBox.create_from_points(
       o3d.utility.Vector3dVector(np.array(roi_pts, dtype=np.float64)),
-      #robust = True
+      extent = np.array([self.buffer_size * 2] * 3)
       )
     translation_bc_adjust = np.vstack([
       np.hstack([
@@ -121,9 +123,7 @@ class Region:
     self.translation = T_RC[:-1,3].tolist()
     self.rotation = Rotation.from_matrix(np.array(obb.R)).as_quat().tolist()
     self.size = obb.extent.tolist()
-    self.mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(
-      obb
-      ).compute_vertex_normals().paint_uniform_color([0.9, 0.9, 0.1])
+    self.mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb).compute_vertex_normals()
     
   def createObjectMesh(self, obj):
     # populate object
@@ -139,10 +139,13 @@ class Region:
           Rotation.from_quat(np.array(obj.rotation)).as_matrix(),
           center = np.zeros(3)
           ).translate(obj.sceneLoc.asNumpyCartesian)
-    obj.mesh = mesh.compute_vertex_normals().paint_uniform_color([0.1, 0.9, 0.1])
+    obj.mesh = mesh.compute_vertex_normals()
     return obj
 
   def is_intersecting(self, obj):
+    if not self.compute_intersection:
+      return False
+
     if self.mesh == None:
       self.createMesh()
     self.createObjectMesh(obj)

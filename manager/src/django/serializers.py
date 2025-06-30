@@ -435,6 +435,9 @@ class RegionSerializer(NonNullSerializer):
     if scene_uid is not None:
       validated_data['scene_id'] = scene_uid['pk']
     points = validated_data.pop('points', None)
+    buffer_size = validated_data.pop('buffer_size', 0.0)
+    height = validated_data.pop('height', 1.0)
+    volumetric = validated_data.pop('volumetric', False)
     color_ranges = validated_data.pop('roi_occupancy_threshold', None)
 
     if color_ranges:
@@ -466,12 +469,12 @@ class RegionSerializer(NonNullSerializer):
 
   class Meta:
     model = Region
-    fields = ['uid', 'name', 'points', 'scene', 'color_ranges']
+    fields = ['uid', 'name', 'points', 'scene', 'buffer_size', 'height', 'volumetric', 'color_ranges']
 
 class TripwireSerializer(RegionSerializer):
   class Meta:
     model = Tripwire
-    fields = ['uid', 'name', 'points', 'scene']
+    fields = ['uid', 'name', 'points', 'height', 'scene']
 
 class TransformSerializerField(serializers.DictField):
   def to_representation(self, obj):

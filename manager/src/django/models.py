@@ -870,6 +870,9 @@ class BoundingBoxPoints(models.Model):
 class Region(BoundingBox):
   uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
   scene = models.ForeignKey(Scene, on_delete=models.CASCADE, related_name="regions")
+  buffer_size = models.FloatField(default=0.0, null=False, blank=False)
+  height = models.FloatField(default=1.0, null=False, blank=False)
+  volumetric = models.BooleanField(choices=BOOLEAN_CHOICES, default=False, null=True)
 
   def get_sectors(self):
     if not hasattr(self, 'roi_occupancy_threshold'):
@@ -882,6 +885,7 @@ class RegionPoint(BoundingBoxPoints):
 class Tripwire(BoundingBox):
   uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
   scene = models.ForeignKey(Scene, on_delete=models.CASCADE, related_name="tripwires")
+  height = models.FloatField(default=1.0, null=False, blank=False)
 
 class TripwirePoint(BoundingBoxPoints):
   tripwire = models.ForeignKey(Tripwire, on_delete=models.CASCADE, related_name="points")
