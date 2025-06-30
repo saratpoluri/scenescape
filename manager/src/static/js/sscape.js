@@ -12,9 +12,6 @@
 'use strict';
 
 import {
-  ConvergedCameraCalibration
-} from "/static/js/cameracalibrate.js";
-import {
   APP_NAME,
   CMD_AUTOCALIB_SCENE,
   CMD_CAMERA,
@@ -36,6 +33,15 @@ import {
 } from "/static/js/utils.js";
 import { plot } from "/static/js/marks.js";
 import { setupChildScene } from "/static/js/childscene.js";
+import {
+  initializeCalibration,
+  registerAutoCameraCalibration,
+  manageCalibrationState,
+  initializeCalibrationSettings,
+  updateCalibrationView,
+  handleAutoCalibrationPose,
+  setMqttForCalibration
+} from "/static/js/calibration.js";
 
 var svgCanvas = Snap("#svgout");
 var points, maps, rois, tripwires, child_rois, child_tripwires, child_sensors;
@@ -52,9 +58,6 @@ var is_coloring_enabled = false; // Default state of the coloring feature
 var roi_color_sectors = {};
 var singleton_color_sectors = {};
 var scene_rotation_translation_config;
-var calibration_strategy;
-const camera_calibration = new ConvergedCameraCalibration();
-var advanced_calibration_fields = [];
 
 points = maps = rois = tripwires = [];
 dragging = drawing = adding = editing = fullscreen = false;
@@ -133,25 +136,7 @@ async function checkBrokerConnections() {
 
         if (window.location.href.includes('/cam/calibrate/')) {
           // distortion available only for percebro or supporting VA
-          document.getElementById("lock_distortion_k1").style.visibility = 'hidden';
-          advanced_calibration_fields = $("#kubernetes-fields").val().split(",");
-          updateElements(advanced_calibration_fields.map(e => e + "_wrapper"), "hidden", true);
-
-          client.subscribe(APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val());
-          console.log("Subscribed to " + APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val());
-          client.publish(APP_NAME + SYS_PERCEBRO_STATUS + $("#sensor_id").val(), "isAlive");
-
-          calibration_strategy = document.getElementById("calib_strategy").value;
-
-          if (calibration_strategy === "Manual") {
-            document.getElementById("auto-camcalibration").hidden = true;
-          } else {
-            client.subscribe(APP_NAME + SYS_AUTOCALIB_STATUS);
-            console.log("Subscribed to " + SYS_AUTOCALIB_STATUS);
-            client.publish(APP_NAME + SYS_AUTOCALIB_STATUS, "isAlive");
-            client.subscribe(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id);
-            console.log("Subscribed to " + CMD_AUTOCALIB_SCENE);
-          }
+          initializeCalibration(client, scene_id);
         }
 
         $("#mqtt_status").addClass("connected");
@@ -216,9 +201,7 @@ async function checkBrokerConnections() {
         }
         else if (topic.includes(SYS_PERCEBRO_STATUS)) {
           if (msg == "running") {
-            camera_calibration.setMqttClient(client, APP_NAME + IMAGE_CALIBRATE + $("#sensor_id").val());
-            document.getElementById("lock_distortion_k1").style.visibility = 'visible';
-            updateElements(advanced_calibration_fields.map(e => e + "_wrapper"), "hidden", false);
+            setMqttForCalibration(client);
           }
         }
         else if (topic.includes("event")) {
@@ -281,21 +264,7 @@ async function checkBrokerConnections() {
           }
         }
         else if (topic.includes(IMAGE_CALIBRATE)) {
-          const image = "data:image/jpeg;base64," + msg.image;
-          const cameraMatrix = [
-            [$("#id_intrinsics_fx").val(), 0, $("#id_intrinsics_cx").val()],
-            [0, $("#id_intrinsics_fy").val(), $("#id_intrinsics_cy").val()],
-            [0, 0, 1]
-          ];
-          const distCoeffs = [
-            $("#id_distortion_k1").val(),
-            $("#id_distortion_k2").val(),
-            $("#id_distortion_p1").val(),
-            $("#id_distortion_p2").val(),
-            $("#id_distortion_k3").val()
-          ];
-          camera_calibration.updateCalibrationViews(image, cameraMatrix, distCoeffs);
-          $("#snapshot").trigger("click");
+          updateCalibrationView(msg);
         }
         else if (topic.includes(DATA_CAMERA)) {
           var id = topic.slice(topic.lastIndexOf('/') + 1);
@@ -314,56 +283,16 @@ async function checkBrokerConnections() {
         }
         else if (topic.includes(SYS_AUTOCALIB_STATUS)) {
           if (msg === 'running') {
-            if (document.getElementById("auto-camcalibration")) {
-              document.getElementById("auto-camcalibration").disabled = true;
-              document.getElementById("auto-camcalibration").title = "Initializing auto camera calibration";
-              document.getElementById("calib-spinner").classList.remove("hide-spinner");
-            }
-            client.publish(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id, "register");
+            registerAutoCameraCalibration(client, scene_id);
           }
         }
         else if (topic.includes(CMD_AUTOCALIB_SCENE + scene_id)) {
           if (msg !== "register") {
-            if (document.getElementById("auto-camcalibration")) {
-              if (msg.status == "registering") {
-                document.getElementById("calib-spinner").classList.remove("hide-spinner");
-                document.getElementById("auto-camcalibration").title = "Registering the scene";
-              } else if (msg.status == "busy") {
-                document.getElementById("calib-spinner").classList.remove("hide-spinner");
-                document.getElementById("auto-camcalibration").disabled = true;
-                var button_message = (msg?.scene_id == scene_id) ? ("Scene updated, Registering the scene") :
-                  ("Unavailable, registering scene : " + msg?.scene_name)
-                document.getElementById("auto-camcalibration").title = button_message;
-              } else if (msg.status == "success") {
-                document.getElementById("calib-spinner").classList.add("hide-spinner");
-                if (calibration_strategy == "Markerless") {
-                  document.getElementById("auto-camcalibration").title = "Go to 3D view for Markerless auto camera calibration.";
-                }
-                else {
-                  document.getElementById("auto-camcalibration").disabled = false;
-                  document.getElementById("auto-camcalibration").title = "Click to calibrate the camera automatically";
-                }
-              } else if (msg.status == "re-register") {
-                client.publish(APP_NAME + CMD_AUTOCALIB_SCENE + scene_id, "register");
-              } else {
-                document.getElementById("calib-spinner").classList.add("hide-spinner");
-                document.getElementById("auto-camcalibration").title = msg.status;
-              }
-            }
+            manageCalibrationState(msg, client, scene_id);
           }
         }
         else if (topic.includes(DATA_AUTOCALIB_CAM_POSE)) {
-          if (msg.error === "False") {
-            camera_calibration.clearCalibrationPoints();
-            camera_calibration.addAutocalibrationPoints(msg);
-          }
-          else {
-            alert(`${msg.message} Please try again.\n\nIf you keep getting this error, please check the documentation for known issues.`);
-          }
-
-          document.getElementById("auto-camcalibration").disabled = false;
-          document.getElementById("reset_points").disabled = false;
-          document.getElementById("top_save").disabled = false;
+          handleAutoCalibrationPose(msg);
         }
       });
 
@@ -1440,40 +1369,7 @@ $(document).ready(function () {
   $(".content").imagesLoaded(function () {
 
     // Camera calibration interface
-    if ($(".cameraCal").length) {
-      camera_calibration.initializeCamCanvas(
-        $("#camera_img_canvas")[0],
-        $("#camera_img").attr("src")
-      );
-      camera_calibration.initializeViewport(
-        $("#map_canvas_3D")[0],
-        $("#scale").val(),
-        $("#scene").val(),
-        `Token ${$("#auth-token").val()}`
-      );
-
-      const transformType = $("#id_transform_type").val();
-      const initialTransforms = $("#initial-id_transforms").val().split(",");
-      camera_calibration.addInitialCalibrationPoints(initialTransforms, transformType);
-
-      // Set up callbacks for buttons in the calibration interface
-      camera_calibration.setupResetPointsButton();
-      camera_calibration.setupResetViewButton();
-      camera_calibration.setupSaveCameraButton();
-      camera_calibration.setupOpacitySlider();
-
-      // Set all inputs with the id id_{{ field_name }} and distortion or intrinsic in the name to disabled
-      $("input[id^='id_'][name*='distortion'], input[id^='id_'][name*='intrinsic']").prop("disabled", true);
-
-      // for all elements with the id enabled_{{ field_name }}
-      // when the input is checked, disable the input with the id id_{{ field_name }}
-      // otherwise, enable the input
-      $("input[id^='enabled_']").on("change", function () {
-        const field = $(this).attr("id").replace("enabled_", "");
-        const input = $(`#id_${field}`);
-        input.prop("disabled", $(this).is(":checked"));
-      });
-    }
+    initializeCalibrationSettings();
 
     // SVG scene implementation
     if (svgCanvas) {
@@ -1831,3 +1727,4 @@ $(document).ready(function () {
     return true; // Normally submit the form
   });
 });
+
