@@ -435,9 +435,6 @@ class RegionSerializer(NonNullSerializer):
     if scene_uid is not None:
       validated_data['scene_id'] = scene_uid['pk']
     points = validated_data.pop('points', None)
-    buffer_size = validated_data.pop('buffer_size', 0.0)
-    height = validated_data.pop('height', 1.0)
-    volumetric = validated_data.pop('volumetric', False)
     color_ranges = validated_data.pop('roi_occupancy_threshold', None)
 
     if color_ranges:

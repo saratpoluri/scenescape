@@ -485,6 +485,12 @@ function stringifyRois() {
       }
     });
 
+    // Get volumetric measurement settings
+    const formElement = document.getElementById("form-" + i);
+    const volumetric = formElement.querySelector(".roi-volumetric")?.checked || false;
+    const height = parseFloat(formElement.querySelector(".roi-height")?.value) || 1.0;
+    const buffer = parseFloat(formElement.querySelector(".roi-buffer")?.value) || 0.0;
+
     var roi_sectors = [];
     var input_mins = document.querySelectorAll("#form-" + i + " [class$='_min']");
     for (var j = 0; j < input_mins.length; j++) {
@@ -499,7 +505,10 @@ function stringifyRois() {
     var entry = {
       title: title,
       points: tuples,
-      uuid: region_uuid
+      uuid: region_uuid,
+      volumetric: volumetric,
+      height: height,
+      buffer_size: buffer
     };
 
     const range_max_element = document.querySelector("#form-" + i + " [class$='_max']");
@@ -1154,6 +1163,20 @@ function drawRoi(e, index, type) {
           + scene_id + "/"
           + index + "/count");
 
+      // Set volumetric checkbox and related fields
+      if (e.volumetric !== undefined) {
+        $("#form-" + i).find(".roi-volumetric").prop('checked', e.volumetric);
+      }
+
+      // Set height field
+      if (e.height !== undefined) {
+        $("#form-" + i).find(".roi-height").val(e.height);
+      }
+
+      // Set buffer size field
+      if (e.buffer_size !== undefined) {
+        $("#form-" + i).find(".roi-buffer").val(e.buffer_size);
+      }
       for (var sector in e.sectors.thresholds) {
         var color = e.sectors.thresholds[sector].color;
         var min = e.sectors.thresholds[sector].color_min;

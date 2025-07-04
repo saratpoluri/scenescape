@@ -18,7 +18,7 @@ from scipy.spatial.transform import Rotation
 from fast_geometry import Point, Line, Rectangle, Polygon, Size
 
 DEFAULTZ = 0
-ROI_Z_HEIGHT = 0.25
+ROI_Z_HEIGHT = 1.0
 
 # Re-export modules from fast geometry as our own
 __all__ = ['Point', 'Line', 'Rectangle', 'Size']
@@ -36,24 +36,22 @@ class Region:
     self.name = name
     self.area = None
     self.mesh = None
-    self.updatePoints(info)
     self.objects = {}
     self.when = -1
     self.points_list = None
     self.polygon = None
     self.singleton_type = None
+    self.updatePoints(info)
     self.updateSingletonType(info)
-    self.compute_intersection = False
-    self.region_height = ROI_Z_HEIGHT
-    self.buffer_size = 0.0
+    self.updateVolumetricInfo(info)
     return
 
   def updatePoints(self, newPoints):
-    if (not isarray(newPoints) and 'center' in newPoints):
+    if (not self.hasPointsArray(newPoints) and 'center' in newPoints):
       pt = newPoints['center']
       self.center = pt if isinstance(pt, Point) else Point(pt)
 
-    if isarray(newPoints) or ('area' in newPoints and newPoints['area'] == "poly"):
+    if (self.hasPointsArray(newPoints)) or ('area' in newPoints and newPoints['area'] == "poly"):
       self.area = Region.REGION_POLY
       self.points = []
       if not isarray(newPoints):
@@ -76,9 +74,19 @@ class Region:
       raise ValueError("Unrecognized point data", newPoints)
     return
 
+  def hasPointsArray(self, newPoints):
+    return 'points' in newPoints and isarray(newPoints['points'])
+
   def updateSingletonType(self, info):
     if isinstance(info, dict):
       self.singleton_type = info.get('singleton_type', None)
+    return
+
+  def updateVolumetricInfo(self, info):
+    if isinstance(info, dict):
+      self.compute_intersection = info.get('volumetric', False)
+      self.region_height = float(info.get('region_height', ROI_Z_HEIGHT))
+      self.buffer_size = float(info.get('buffer_size', 0.0))
     return
 
   def findBoundingBox(self):
@@ -98,9 +106,9 @@ class Region:
     roi_pts = [[pt.x, pt.y, 0] for pt in self.points]
     roi_pts += [[pt.x, pt.y] + [self.region_height] for pt in self.points]
     obb = o3d.geometry.OrientedBoundingBox.create_from_points(
-      o3d.utility.Vector3dVector(np.array(roi_pts, dtype=np.float64)),
-      extent = np.array([self.buffer_size * 2] * 3)
-      )
+      o3d.utility.Vector3dVector(np.array(roi_pts, dtype=np.float64))
+    )
+    obb.extent = np.array([self.buffer_size * 2] * 3)
     translation_bc_adjust = np.vstack([
       np.hstack([
         np.identity(3),
@@ -127,20 +135,46 @@ class Region:
     
   def createObjectMesh(self, obj):
     # populate object
+    if not (hasattr(obj, 'size') and isarray(obj.size) and all(isinstance(s, (int, float)) for s in obj.size)):
+      raise ValueError("Object must have a valid 'size' attribute (list or array of numbers)")
+    
+    if not (hasattr(obj, 'rotation') and isarray(obj.rotation) and len(obj.rotation) == 4):
+      raise ValueError("Object must have a valid 'rotation' attribute (quaternion)")
+    
+    if not (hasattr(obj, 'sceneLoc') and hasattr(obj.sceneLoc, 'asNumpyCartesian')):
+      raise ValueError("Object must have a valid 'sceneLoc' attribute with 'asNumpyCartesian' method")
+    
+    # Create a basic box mesh
     mesh = o3d.geometry.TriangleMesh.create_box(
       obj.size[0],
       obj.size[1],
       obj.size[2]
-      ).translate(np.array([
-        -obj.size[0]/2,
-        -obj.size[1]/2,
-        0
-        ])).rotate(
-          Rotation.from_quat(np.array(obj.rotation)).as_matrix(),
-          center = np.zeros(3)
-          ).translate(obj.sceneLoc.asNumpyCartesian)
+    )
+    
+    # Center the box at origin
+    mesh = mesh.translate(np.array([
+      -obj.size[0]/2,
+      -obj.size[1]/2,
+      0
+    ]))
+    
+    # Rotate the box based on quaternion
+    try:
+      rotation_matrix = Rotation.from_quat(np.array(obj.rotation)).as_matrix()
+      mesh = mesh.rotate(
+        rotation_matrix,
+        center=np.zeros(3)
+      )
+    except Exception as e:
+      raise ValueError(f"Failed to apply rotation: {e}")
+    
+    # Translate to final position
+    try:
+      mesh = mesh.translate(obj.sceneLoc.asNumpyCartesian)
+    except Exception as e:
+      raise ValueError(f"Failed to translate mesh to sceneLoc: {e}")
     obj.mesh = mesh.compute_vertex_normals()
-    return obj
+    return
 
   def is_intersecting(self, obj):
     if not self.compute_intersection:
@@ -148,8 +182,15 @@ class Region:
 
     if self.mesh == None:
       self.createMesh()
-    self.createObjectMesh(obj)
+
+    try:
+      self.createObjectMesh(obj)
+    except ValueError as e:
+      print(f"Error creating object mesh for intersection check: {e}")
+      return False
+
     return obj.mesh.is_intersecting(self.mesh)
+
 
   def isPointWithin(self, coord):
     if self.area == Region.REGION_SCENE:

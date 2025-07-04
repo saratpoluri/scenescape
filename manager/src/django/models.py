@@ -279,7 +279,8 @@ class Scene(models.Model):
   def roiJSON(self):
     jdata = []
     for region in self.regions.all():
-      rdict = {'title': region.name, 'points': [], 'uuid':str(region.uuid)}
+      rdict = {'title': region.name, 'points': [], 'uuid':str(region.uuid), 
+               'volumetric': region.volumetric, 'height': region.height, 'buffer_size': region.buffer_size}
       thresholds, range_max = region.get_sectors()
       rdict['sectors'] = {'thresholds':thresholds, 'range_max':range_max}
 
@@ -387,16 +388,17 @@ class Scene(models.Model):
       mScene.regions.pop(k)
 
     oldTripwires = list(mScene.tripwires.keys())
+    info = {}
     for tripwire in self.tripwires.all():
       uiPoints = tripwire.points.all()
       if len(uiPoints) == 0:
         continue
 
-      rPoints = [(pt.x, pt.y) for pt in uiPoints]
+      info['points'] = [(pt.x, pt.y) for pt in uiPoints]
       if tripwire.name in mScene.tripwires:
-        mScene.tripwires[tripwire.name].updatePoints(rPoints)
+        mScene.tripwires[tripwire.name].updatePoints(info)
       else:
-        mScene.tripwires[tripwire.name] = ScenescapeTripwire(tripwire.uuid, tripwire.name, rPoints)
+        mScene.tripwires[tripwire.name] = ScenescapeTripwire(tripwire.uuid, tripwire.name, info['points'])
 
     newTripwires = list(mScene.tripwires.keys())
     delTripwires = list(set(oldTripwires) - set(newTripwires))

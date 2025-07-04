@@ -570,15 +570,25 @@
         <div class="input-group-prepend">
           <label class="input-group-text roi-number"></label>
         </div>
-        <input type="text" class="form-control roi-title" placeholder="ROI Name" required maxlength="200" />
+        <input type="text" class="form-control roi-title" placeholder="ROI Name" required maxlength="100" />
         <div class="input-group-append">
           <button class="btn btn-secondary roi-remove" type="button" title="Remove this ROI"><i
               class="bi bi-trash"></i></button>
         </div>
-        <div class="input-group-prepend">
-          <label class="input-group-text roi-number"></label>
+        <div class="input-group-append ml-2">
+          <div class="form-check form-check-inline">
+            <input class="form-check-input roi-volumetric" type="checkbox" id="volumetric-check">
+            <label class="form-check-label" for="volumetric-check">Volumetric</label>
+          </div>
+          <div class="input-group-prepend">
+            <span class="input-group-text">Height</span>
+          </div>
+          <input type="number" class="form-control roi-height" placeholder="Height" value="1.0" min="0.1" style="width: 80px;">
+          <div class="input-group-prepend ml-2">
+            <span class="input-group-text">Buffer Size</span>
+          </div>
+          <input type="number" class="form-control roi-buffer" placeholder="Buffer" value="0.0" min="0.0" style="width: 80px;">
         </div>
-        <input type="number" class="form-control" value="1.0" style="width: 50px;" />
         <div class="roi-visualization ml-auto">
           <div class="sector-container" id="roi_sectors">
             <div class="color-range">Color Range:</div>
@@ -598,7 +608,6 @@
         <label for="topic-text"></label>
         <i class="topic-text" title="Click to copy the topic!">Save regions to view the topic</i>
       </div>
-
       {% else %}
       <div class="input-group">
         <div class="input-group-prepend">
@@ -646,6 +655,5 @@
       {% endif %}
     </div>
   </div>
-</div>
 
-{% endblock %}
+  {% endblock %}
