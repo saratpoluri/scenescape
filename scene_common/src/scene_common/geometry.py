@@ -85,7 +85,7 @@ class Region:
   def updateVolumetricInfo(self, info):
     if isinstance(info, dict):
       self.compute_intersection = info.get('volumetric', False)
-      self.region_height = float(info.get('region_height', ROI_Z_HEIGHT))
+      self.region_height = float(info.get('height', ROI_Z_HEIGHT))
       self.buffer_size = float(info.get('buffer_size', 0.0))
     return
 

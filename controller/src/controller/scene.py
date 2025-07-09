@@ -25,8 +25,6 @@ from scene_common.scene_model import SceneModel
 from scene_common.timestamp import get_epoch_time, get_iso_time
 from scene_common.transform import CameraPose
 
-# from controller.detections_builder import buildDetectionsList
-
 DEBOUNCE_DELAY = 0.5
 
 class TripwireEvent:
@@ -292,8 +290,6 @@ class Scene(SceneModel):
       for obj in curObjects:
         if obj.frameCount > 3 \
            and (region.isPointWithin(obj.sceneLoc) or region.is_intersecting(obj)):
-          if (not region.isPointWithin(obj.sceneLoc)) and region.is_intersecting(obj):
-            log.info("SARAT: object intersecting")
           objects.append(obj)
 
       cur = set(x.gid for x in objects)  

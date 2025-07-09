@@ -39,26 +39,6 @@ export default class SceneRegion extends THREE.Object3D {
     }
   }
 
-  createCircle(x, y) {
-    let cylinderGeometry = null;
-    if (this.points.length > 0) {
-      const shape = new THREE.Shape(this.points);
-      cylinderGeometry = new THREE.ExtrudeGeometry(shape, this.extrudeSettings);
-      const center = new THREE.Vector3(x, y, 0);
-      cylinderGeometry.translate(center.x, center.y, center.z);
-    }
-    return cylinderGeometry;
-  }
-
-  createPoly() {
-    let polyGeometry = null;
-    if (this.points.length > 0) {
-      const shape = new THREE.Shape(this.points);
-      polyGeometry = new THREE.ExtrudeGeometry(shape, this.extrudeSettings);
-    }
-    return polyGeometry;
-  }
-
   createShape() {
     this.extrudeSettings = {
       depth: this.height,
@@ -76,9 +56,7 @@ export default class SceneRegion extends THREE.Object3D {
     if (this.regionType === 'poly') {
       const polyGeometry = this.createPoly();
       this.shape = new THREE.Mesh(polyGeometry, this.material);
-    }
-
-    if (this.regionType === 'circle') {
+    } else if (this.regionType === 'circle') {
       let cylinderGeometry = null;
       if (this.region.hasOwnProperty("center")) {
         cylinderGeometry = this.createCircle(this.region.center[0], this.region.center[1])
@@ -112,6 +90,26 @@ export default class SceneRegion extends THREE.Object3D {
         this.points.push(new THREE.Vector2(x, y));
       }
     }
+  }
+
+  createCircle(x, y) {
+    let cylinderGeometry = null;
+    if (this.points.length > 0) {
+      const shape = new THREE.Shape(this.points);
+      cylinderGeometry = new THREE.ExtrudeGeometry(shape, this.extrudeSettings);
+      const center = new THREE.Vector3(x, y, 0);
+      cylinderGeometry.translate(center.x, center.y, center.z);
+    }
+    return cylinderGeometry;
+  }
+
+  createPoly() {
+    let polyGeometry = null;
+    if (this.points.length > 0) {
+      const shape = new THREE.Shape(this.points);
+      polyGeometry = new THREE.ExtrudeGeometry(shape, this.extrudeSettings);
+    }
+    return polyGeometry;
   }
 
   changeGeometry(geometry) {
