@@ -108,7 +108,9 @@ class Region:
     obb = o3d.geometry.OrientedBoundingBox.create_from_points(
       o3d.utility.Vector3dVector(np.array(roi_pts, dtype=np.float64))
     )
-    obb.extent = np.array([self.buffer_size * 2] * 3)
+    # Only add buffer in x and y direction
+    obb.extent = obb.extent + np.array([self.buffer_size * 2, self.buffer_size * 2, 0])
+    # Translate the ROI so the bottom center of 3D bounding box is on the XY plane.
     translation_bc_adjust = np.vstack([
       np.hstack([
         np.identity(3),
@@ -132,6 +134,7 @@ class Region:
     self.rotation = Rotation.from_matrix(np.array(obb.R)).as_quat().tolist()
     self.size = obb.extent.tolist()
     self.mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb).compute_vertex_normals()
+    return
     
   def createObjectMesh(self, obj):
     # populate object

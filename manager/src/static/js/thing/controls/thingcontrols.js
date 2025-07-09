@@ -21,13 +21,14 @@ export default class ThingControls {
       'name': this.object3D.name,
       'color': this.object3D.color,
       'show': false,
-      'height': this.object3D.height
+      'height': this.object3D.height,
+      'buffer_size': this.object3D.buffer_size
     };
 
     let control = this.controlsFolder.add(this.panelSettings, 'name');
     let textMesh = this.object3D.scene.getObjectByName("textObject_" + this.object3D.name);
 
-    control = this.controlsFolder.add(this.panelSettings, 'height', this.object3D.height, this.object3D.maxHeight).onChange((function (value) {
+    control = this.controlsFolder.add(this.panelSettings, 'height', this.object3D.height).onChange((function (value) {
       if (this.object3D.hasOwnProperty('shape') && this.object3D.shape !== null) {
         this.object3D.shape.scale.z = value / this.object3D.scaleFactor;
         let textMesh = this.object3D.scene.getObjectByName("textObject_" + this.object3D.name);
@@ -37,6 +38,10 @@ export default class ThingControls {
 
     if (this.object3D.setOpacity) {
       control = this.controlsFolder.add(this.object3D.material, 'opacity', 0, this.object3D.maxOpacity).name('opacity')
+    }
+
+    if (this.object3D.buffer_size) {
+      control = this.controlsFolder.add(this.panelSettings, 'buffer_size');
     }
 
     control = this.controlsFolder.add(this.panelSettings, 'show').onChange((function (value) {

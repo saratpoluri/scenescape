@@ -292,6 +292,8 @@ class Scene(SceneModel):
       for obj in curObjects:
         if obj.frameCount > 3 \
            and (region.isPointWithin(obj.sceneLoc) or region.is_intersecting(obj)):
+          if (not region.isPointWithin(obj.sceneLoc)) and region.is_intersecting(obj):
+            log.info("SARAT: object intersecting")
           objects.append(obj)
 
       cur = set(x.gid for x in objects)  

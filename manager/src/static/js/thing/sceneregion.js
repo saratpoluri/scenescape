@@ -13,7 +13,6 @@ import ThingControls from '/static/js/thing/controls/thingcontrols.js';
 import * as THREE from '/static/assets/three.module.js';
 import validateInputControls from '/static/js/thing/controls/validateinputcontrols.js';
 
-const MAX_HEIGHT = 10;
 const MAX_OPACITY = 1;
 const MAX_SEGMENTS = 65;
 
@@ -24,6 +23,8 @@ export default class SceneRegion extends THREE.Object3D {
     this.region = params;
     this.points = [];
     this.isStaff = params.isStaff;
+    this.height = params.height;
+    this.buffer_size = params.buffer_size;
     this.regionType = null;
 
     if (this.region.area === 'scene') {
@@ -57,6 +58,7 @@ export default class SceneRegion extends THREE.Object3D {
     }
     return polyGeometry;
   }
+
   createShape() {
     this.extrudeSettings = {
       depth: this.height,
@@ -122,14 +124,13 @@ export default class SceneRegion extends THREE.Object3D {
       this.add(this.shape);
     }
   }
+
   addObject(params) {
     this.color = params.color;
     this.drawObj = params.drawObj;
     this.opacity = params.opacity;
-    this.maxHeight = MAX_HEIGHT;
     this.maxOpacity = MAX_OPACITY;
     this.scene = params.scene;
-    this.height = params.height;
     this.regionsFolder = params.regionsFolder;
     this.visible = false;
     this.regionControls = new ThingControls(this);
