@@ -10,16 +10,23 @@
 # or implied warranties, other than those that are expressly stated in the License.
 
 import math
+import time
 
 import open3d as o3d
 import numpy as np
 from scipy.spatial.transform import Rotation
+VOLUMETRIC_AVAILABLE = True
+try:
+  import mapbox_earcut as earcut
+except ImportError:
+  print("Warning: volumetric intersection disabled.")
+  VOLUMETRIC_AVAILABLE = False
 
 BUFFER_AVAILABLE = True
 try:
   from shapely import geometry
 except ImportError:
-  print("Warning: shapely module not found. Some geometry operations may not work.")
+  print("Warning: shapely module not found. Buffer operations are unavailable.")
   BUFFER_AVAILABLE = False
 
 from fast_geometry import Point, Line, Rectangle, Polygon, Size
@@ -120,59 +127,78 @@ class Region:
     Returns:
         mesh: open3d.geometry.TriangleMesh
     """
+    roi_pts = self.createBasePolygon()
+    # Create base polygon points
+    base_pts = np.array(roi_pts)
+    n_points = len(base_pts)
+    
+    # 1. Triangulate the 2D polygon using Ear Clipping 👂
+    # This algorithm correctly handles concave shapes by "clipping" triangular "ears".
+    # The result is a list of vertex indices.
+    triangle_indices = earcut.triangulate_float32(base_pts, np.array([n_points]))
+    
+    # Reshape the flat list of indices into a (n, 3) array of triangles.
+    triangles = np.array(triangle_indices).reshape(-1, 3)
+
+    # 2. Create vertices for the 3D mesh 🧊
+    # Bottom vertices (z=0)
+    bottom_vertices = np.hstack([base_pts, np.zeros((base_pts.shape[0], 1))])
+    # Top vertices (z=height)
+    top_vertices = np.hstack([base_pts, np.full((base_pts.shape[0], 1), self.region_height)])
+    
+    # Combine all vertices.
+    vertices = np.vstack([bottom_vertices, top_vertices])
+
+    # 3. Create triangular faces for the 3D mesh ✅
+    num_vertices_2d = base_pts.shape[0]
+
+    # Faces for the bottom and top caps come from our ear clipping result.
+    bottom_triangles = triangles
+    top_triangles = triangles + num_vertices_2d
+
+    # Faces for the sides connect corresponding top and bottom vertices.
+    side_triangles = []
+    for i in range(num_vertices_2d):
+        j = (i + 1) % num_vertices_2d  # Get the next vertex, wrapping around.
+        side_triangles.append([i, j, i + num_vertices_2d])
+        side_triangles.append([j, j + num_vertices_2d, i + num_vertices_2d])
+
+    # Combine all the triangle sets.
+    all_triangles = np.vstack([bottom_triangles, top_triangles, np.array(side_triangles)])
+
+    # 4. Create the Open3D TriangleMesh
+    self.mesh = o3d.geometry.TriangleMesh(
+        o3d.utility.Vector3dVector(vertices),
+        o3d.utility.Vector3iVector(all_triangles)
+    )
+
+    # Compute normals for correct shading and lighting.
+    self.mesh.compute_vertex_normals()
+    return
+
+  def createBasePolygon(self):
     mitre_inflated = None
     if BUFFER_AVAILABLE:
       base_polygon = geometry.Polygon([(pt.x, pt.y) for pt in self.points])
       mitre_inflated = base_polygon.buffer(self.buffer_size, join_style=2)
 
     roi_pts = None
-    # Extract coordinates from inflated polygon
-    # For simple polygons, exterior coordinates are sufficient
-    if mitre_inflated is not None and hasattr(mitre_inflated, 'exterior'):
-      # Get coordinates from the exterior of the inflated polygon
-      inflated_coords = list(mitre_inflated.exterior.coords)
-      # Convert to Point objects
-      roi_pts = [[x, y, 0] for x, y in inflated_coords]
+  # Extract coordinates from inflated polygon
+  # Handle both simple and complex polygons during inflation
+    if mitre_inflated is not None:
+    # For complex polygons with holes
+      if hasattr(mitre_inflated, 'geom_type') and mitre_inflated.geom_type == 'MultiPolygon':
+      # Take the largest polygon from the multipolygon result
+        largest_poly = max(mitre_inflated.geoms, key=lambda g: g.area)
+        inflated_coords = list(largest_poly.exterior.coords)
+        roi_pts = [[x, y] for x, y in inflated_coords]
+      elif hasattr(mitre_inflated, 'exterior'):
+      # Single polygon result
+        inflated_coords = list(mitre_inflated.exterior.coords)
+        roi_pts = [[x, y] for x, y in inflated_coords]
     else:
-      roi_pts = [[pt.x, pt.y, 0] for pt in self.points]
-    # Create base polygon points
-    base_pts = np.array(roi_pts)
-    n_points = len(base_pts)
-    
-    # Create top polygon points by adding height to z coordinates
-    top_pts = np.copy(base_pts)
-    top_pts[:, 2] += self.region_height
-    
-    # Combine all points into vertices for the mesh
-    vertices = np.vstack([base_pts, top_pts])
-    
-    # Create triangles for base and top faces (assuming convex polygon)
-    base_triangles = []
-    top_triangles = []
-    for i in range(1, n_points-1):
-        base_triangles.append([0, i, i+1])
-        # For top face, shift indices by n_points and reverse orientation
-        top_triangles.append([n_points, n_points+i+1, n_points+i])
-    
-    # Create triangles for side faces
-    side_triangles = []
-    for i in range(n_points):
-        j = (i + 1) % n_points
-        # Each side face is a rectangle split into two triangles
-        side_triangles.append([i, j, i+n_points])
-        side_triangles.append([j, j+n_points, i+n_points])
-    
-    # Combine all triangles
-    triangles = np.vstack([base_triangles, top_triangles, side_triangles])
-    
-    # Create the mesh
-    self.mesh = o3d.geometry.TriangleMesh()
-    self.mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    self.mesh.triangles = o3d.utility.Vector3iVector(triangles)
-    
-    # Compute vertex normals for proper rendering
-    self.mesh.compute_vertex_normals()
-    return
+      roi_pts = [[pt.x, pt.y] for pt in self.points]
+    return roi_pts
     
   def createObjectMesh(self, obj):
     # populate object
@@ -218,7 +244,7 @@ class Region:
     return
 
   def is_intersecting(self, obj):
-    if not self.compute_intersection:
+    if not self.compute_intersection or not VOLUMETRIC_AVAILABLE:
       return False
 
     if self.mesh == None:
@@ -230,7 +256,8 @@ class Region:
       print(f"Error creating object mesh for intersection check: {e}")
       return False
 
-    return obj.mesh.is_intersecting(self.mesh)
+    intersecting = obj.mesh.is_intersecting(self.mesh)
+    return intersecting
 
 
   def isPointWithin(self, coord):
