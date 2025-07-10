@@ -32,8 +32,6 @@ from django.contrib.sessions.models import Session
 from django.contrib.auth.models import User
 
 from scene_common.camera import Camera as ScenescapeCamera, CameraPose as ScenescapeCameraPose
-from scene_common.geometry import Line as ScenescapeLine
-from scene_common.geometry import Point as ScenescapePoint
 from scene_common.geometry import Region as ScenescapeRegion, Tripwire as ScenescapeTripwire
 from scene_common.glb_top_view import generateOrthoView, getMeshSize
 from scene_common.mesh_util import extractMeshFromGLB

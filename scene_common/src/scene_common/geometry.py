@@ -14,7 +14,13 @@ import math
 import open3d as o3d
 import numpy as np
 from scipy.spatial.transform import Rotation
-from shapely import geometry
+
+BUFFER_AVAILABLE = True
+try:
+  from shapely import geometry
+except ImportError:
+  print("Warning: shapely module not found. Some geometry operations may not work.")
+  BUFFER_AVAILABLE = False
 
 from fast_geometry import Point, Line, Rectangle, Polygon, Size
 
@@ -114,15 +120,15 @@ class Region:
     Returns:
         mesh: open3d.geometry.TriangleMesh
     """
-    
-    base_polygon = geometry.Polygon([(pt.x, pt.y) for pt in self.points])
+    mitre_inflated = None
+    if BUFFER_AVAILABLE:
+      base_polygon = geometry.Polygon([(pt.x, pt.y) for pt in self.points])
+      mitre_inflated = base_polygon.buffer(self.buffer_size, join_style=2)
 
-    # Inflate with mitre joins
-    mitre_inflated = base_polygon.buffer(self.buffer_size, join_style=2)
     roi_pts = None
     # Extract coordinates from inflated polygon
     # For simple polygons, exterior coordinates are sufficient
-    if hasattr(mitre_inflated, 'exterior'):
+    if mitre_inflated is not None and hasattr(mitre_inflated, 'exterior'):
       # Get coordinates from the exterior of the inflated polygon
       inflated_coords = list(mitre_inflated.exterior.coords)
       # Convert to Point objects
