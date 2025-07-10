@@ -14,6 +14,7 @@ import math
 import open3d as o3d
 import numpy as np
 from scipy.spatial.transform import Rotation
+from shapely import geometry
 
 from fast_geometry import Point, Line, Rectangle, Polygon, Size
 
@@ -113,7 +114,21 @@ class Region:
     Returns:
         mesh: open3d.geometry.TriangleMesh
     """
-    roi_pts = [[pt.x, pt.y, 0] for pt in self.points]
+    
+    base_polygon = geometry.Polygon([(pt.x, pt.y) for pt in self.points])
+
+    # Inflate with mitre joins
+    mitre_inflated = base_polygon.buffer(self.buffer_size, join_style=2)
+    roi_pts = None
+    # Extract coordinates from inflated polygon
+    # For simple polygons, exterior coordinates are sufficient
+    if hasattr(mitre_inflated, 'exterior'):
+      # Get coordinates from the exterior of the inflated polygon
+      inflated_coords = list(mitre_inflated.exterior.coords)
+      # Convert to Point objects
+      roi_pts = [[x, y, 0] for x, y in inflated_coords]
+    else:
+      roi_pts = [[pt.x, pt.y, 0] for pt in self.points]
     # Create base polygon points
     base_pts = np.array(roi_pts)
     n_points = len(base_pts)
