@@ -102,38 +102,55 @@ class Region:
                                  opposite=Point(bx, by))
     return
   
-  def createMesh(self):
+  def createRegionMesh(self):
+    """
+    Create an extruded polygon mesh from a set of vertices on the XY plane
+    
+    Parameters:
+        vertices: numpy array of shape (n, 3) representing the base polygon vertices
+        height: float, the height to extrude the polygon
+    
+    Returns:
+        mesh: open3d.geometry.TriangleMesh
+    """
     roi_pts = [[pt.x, pt.y, 0] for pt in self.points]
-    roi_pts += [[pt.x, pt.y] + [self.region_height] for pt in self.points]
-    obb = o3d.geometry.OrientedBoundingBox.create_from_points(
-      o3d.utility.Vector3dVector(np.array(roi_pts, dtype=np.float64))
-    )
-    # Only add buffer in x and y direction
-    obb.extent = obb.extent + np.array([self.buffer_size * 2, self.buffer_size * 2, 0])
-    # Translate the ROI so the bottom center of 3D bounding box is on the XY plane.
-    translation_bc_adjust = np.vstack([
-      np.hstack([
-        np.identity(3),
-        np.array([0, 0, obb.extent[2]/2]).reshape((3,1))
-        ]),
-      np.array([0, 0, 0, 1])
-    ])
-    R_center = np.vstack([
-      np.hstack([np.array(obb.R), np.zeros((3,1))]),
-      np.array([0, 0, 0, 1])
-      ])
-    translation_center = np.vstack([
-      np.hstack([
-        np.identity(3),
-        np.array(obb.center).reshape(3,1)
-        ]),
-      np.array([0, 0, 0, 1])
-    ])
-    T_RC = translation_center @ R_center @ np.linalg.inv(translation_bc_adjust)
-    self.translation = T_RC[:-1,3].tolist()
-    self.rotation = Rotation.from_matrix(np.array(obb.R)).as_quat().tolist()
-    self.size = obb.extent.tolist()
-    self.mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(obb).compute_vertex_normals()
+    # Create base polygon points
+    base_pts = np.array(roi_pts)
+    n_points = len(base_pts)
+    
+    # Create top polygon points by adding height to z coordinates
+    top_pts = np.copy(base_pts)
+    top_pts[:, 2] += self.region_height
+    
+    # Combine all points into vertices for the mesh
+    vertices = np.vstack([base_pts, top_pts])
+    
+    # Create triangles for base and top faces (assuming convex polygon)
+    base_triangles = []
+    top_triangles = []
+    for i in range(1, n_points-1):
+        base_triangles.append([0, i, i+1])
+        # For top face, shift indices by n_points and reverse orientation
+        top_triangles.append([n_points, n_points+i+1, n_points+i])
+    
+    # Create triangles for side faces
+    side_triangles = []
+    for i in range(n_points):
+        j = (i + 1) % n_points
+        # Each side face is a rectangle split into two triangles
+        side_triangles.append([i, j, i+n_points])
+        side_triangles.append([j, j+n_points, i+n_points])
+    
+    # Combine all triangles
+    triangles = np.vstack([base_triangles, top_triangles, side_triangles])
+    
+    # Create the mesh
+    self.mesh = o3d.geometry.TriangleMesh()
+    self.mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    self.mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    
+    # Compute vertex normals for proper rendering
+    self.mesh.compute_vertex_normals()
     return
     
   def createObjectMesh(self, obj):
@@ -184,7 +201,7 @@ class Region:
       return False
 
     if self.mesh == None:
-      self.createMesh()
+      self.createRegionMesh()
 
     try:
       self.createObjectMesh(obj)
