@@ -186,6 +186,9 @@ Intel® SceneScape was downloaded, built and deployed onto a fresh Ubuntu 22.04 
 - **How to configure geospatial coordinates**
   - [How to Configure Geospatial Coordinates for a Scene](How-to-configure-geospatial-coordinates.md): Step-by-step guide for configuring geographic coordinates output in object detections.
 
+- **How to configure spatial analytics**
+  - [How to Configure Spatial Analytics](How-to-configure-spatial-analytics.md): Step-by-step guide to set up and use Regions Of Interest (ROIs) and Tripwires 
+
 ## Learn More
 
 - Understand the components, services, architecture, and data flow, in
