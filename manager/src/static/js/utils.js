@@ -145,7 +145,7 @@ function updateElements(elements, action, condition) {
   elements.forEach(function (e) {
     const element = document.getElementById(e);
     if (element) {
-      document.getElementById(e)[action] = condition;
+      element[action] = condition;
     }
   });
 }
