@@ -11,10 +11,11 @@ export default class ThingControls {
   addControlPanel(folder) {
     this.controlsFolder = folder.addFolder(this.object3D.name);
     this.panelSettings = {
-      name: this.object3D.name,
-      color: this.object3D.color,
-      show: false,
-      height: this.object3D.height,
+      'name': this.object3D.name,
+      'color': this.object3D.color,
+      'show': false,
+      'height': this.object3D.height,
+      'buffer_size': this.object3D.buffer_size
     };
 
     let control = this.controlsFolder.add(this.panelSettings, "name");
@@ -22,27 +23,13 @@ export default class ThingControls {
       "textObject_" + this.object3D.name,
     );
 
-    control = this.controlsFolder
-      .add(
-        this.panelSettings,
-        "height",
-        this.object3D.height,
-        this.object3D.maxHeight,
-      )
-      .onChange(
-        function (value) {
-          if (
-            this.object3D.hasOwnProperty("shape") &&
-            this.object3D.shape !== null
-          ) {
-            this.object3D.shape.scale.z = value / this.object3D.scaleFactor;
-            let textMesh = this.object3D.scene.getObjectByName(
-              "textObject_" + this.object3D.name,
-            );
-            textMesh.position.z = value;
-          }
-        }.bind(this),
-      );
+    control = this.controlsFolder.add(this.panelSettings, 'height', this.object3D.height).onChange((function (value) {
+      if (this.object3D.hasOwnProperty('shape') && this.object3D.shape !== null) {
+        this.object3D.shape.scale.z = value / this.object3D.scaleFactor;
+        let textMesh = this.object3D.scene.getObjectByName("textObject_" + this.object3D.name);
+        textMesh.position.z = value
+      }
+    }).bind(this));
 
     if (this.object3D.setOpacity) {
       control = this.controlsFolder
@@ -50,11 +37,13 @@ export default class ThingControls {
         .name("opacity");
     }
 
-    control = this.controlsFolder.add(this.panelSettings, "show").onChange(
-      function (value) {
-        this.object3D.visible = value;
-      }.bind(this),
-    );
+    if (this.object3D.buffer_size) {
+      control = this.controlsFolder.add(this.panelSettings, 'buffer_size');
+    }
+
+    control = this.controlsFolder.add(this.panelSettings, 'show').onChange((function (value) {
+      this.object3D.visible = value;
+    }).bind(this));
 
     control = this.controlsFolder
       .addColor(this.panelSettings, "color")
@@ -69,6 +58,9 @@ export default class ThingControls {
     this.object3D.createShape();
     if (this.object3D.hasOwnProperty("shape")) {
       this.object3D.add(this.object3D.shape);
+    }
+    if (this.object3D.hasOwnProperty('inflatedShape')) {
+      this.object3D.add(this.object3D.inflatedShape);
     }
   }
 

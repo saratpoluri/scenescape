@@ -459,12 +459,12 @@ class RegionSerializer(NonNullSerializer):
 
   class Meta:
     model = Region
-    fields = ['uid', 'name', 'points', 'scene', 'color_ranges']
+    fields = ['uid', 'name', 'points', 'scene', 'buffer_size', 'height', 'volumetric', 'color_ranges']
 
 class TripwireSerializer(RegionSerializer):
   class Meta:
     model = Tripwire
-    fields = ['uid', 'name', 'points', 'scene']
+    fields = ['uid', 'name', 'points', 'height', 'scene']
 
 class TransformSerializerField(serializers.DictField):
   def to_representation(self, obj):

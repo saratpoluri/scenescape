@@ -289,10 +289,10 @@ class Scene(SceneModel):
       curObjects = self.tracker.currentObjects(detectionType)
       for obj in curObjects:
         if obj.frameCount > 3 \
-           and region.isPointWithin(obj.sceneLoc):
+           and (region.isPointWithin(obj.sceneLoc) or region.is_intersecting(obj)):
           objects.append(obj)
 
-      cur = set(x.gid for x in objects)
+      cur = set(x.gid for x in objects)  
       prev = set(x.gid for x in regionObjects)
       new = cur - prev
       old = prev - cur
@@ -412,11 +412,10 @@ class Scene(SceneModel):
     for regionData in newRegions:
       region_uuid = regionData['uid']
       region_name = regionData['name']
-      if 'area' not in regionData and 'points' in regionData:
-        regionData = regionData['points']
       if region_uuid in existingRegions:
         existingRegions[region_uuid].updatePoints(regionData)
         existingRegions[region_uuid].updateSingletonType(regionData)
+        existingRegions[region_uuid].updateVolumetricInfo(regionData)
         existingRegions[region_uuid].name = region_name
       else:
         existingRegions[region_uuid] = Region(region_uuid, region_name, regionData)
