@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: (C) 2023 - 2025 Intel Corporation
+// SPDX-License-Identifier: LicenseRef-Intel-Edge-Software
+// This file is licensed under the Limited Edge Software Distribution License Agreement.
+
 import {
   APP_NAME,
   CMD_AUTOCALIB_SCENE,
