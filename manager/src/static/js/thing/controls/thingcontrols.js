@@ -37,7 +37,7 @@ export default class ThingControls {
         .name("opacity");
     }
 
-    if (this.object3D.buffer_size) {
+    if (this.object3D.hasOwnProperty('buffer_size')) {
       control = this.controlsFolder.add(this.panelSettings, 'buffer_size');
     }
 
