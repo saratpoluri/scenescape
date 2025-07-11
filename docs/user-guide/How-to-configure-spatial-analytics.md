@@ -218,7 +218,8 @@ Follow the steps in [Getting-Started-Guide.md](./Getting-Started-Guide.md) to br
     }
 }
 ```
-
+![Configure and Verify Region of Interest](images/create-roi.gif)
+Figure 1: Region of interest creation flow
 ---
 
 ### 3. Configure and Use a Tripwire
@@ -320,7 +321,8 @@ Follow the steps in [Getting-Started-Guide.md](./Getting-Started-Guide.md) to br
     }
 }
 ```
-
+![Configure and Verify Tripwire](images/create-tripwire.gif)
+Figure 2: Tripwire creation flow
 
 ---
 
