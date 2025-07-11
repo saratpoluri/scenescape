@@ -1,17 +1,10 @@
-// Copyright (C) 2023 Intel Corporation
-//
-// This software and the related documents are Intel copyrighted materials,
-// and your use of them is governed by the express license under which they
-// were provided to you ("License"). Unless the License provides otherwise,
-// you may not use, modify, copy, publish, distribute, disclose or transmit
-// this software or the related documents without Intel's prior written permission.
-//
-// This software and the related documents are provided as is, with no express
-// or implied warranties, other than those that are expressly stated in the License.
+// SPDX-FileCopyrightText: (C) 2023 - 2025 Intel Corporation
+// SPDX-License-Identifier: LicenseRef-Intel-Edge-Software
+// This file is licensed under the Limited Edge Software Distribution License Agreement.
 
-import ThingControls from '/static/js/thing/controls/thingcontrols.js';
-import * as THREE from '/static/assets/three.module.js';
-import validateInputControls from '/static/js/thing/controls/validateinputcontrols.js';
+import ThingControls from "/static/js/thing/controls/thingcontrols.js";
+import * as THREE from "/static/assets/three.module.js";
+import validateInputControls from "/static/js/thing/controls/validateinputcontrols.js";
 
 const MAX_OPACITY = 1;
 const MAX_SEGMENTS = 65;
@@ -27,28 +20,26 @@ export default class SceneRegion extends THREE.Object3D {
     this.buffer_size = params.buffer_size;
     this.regionType = null;
 
-    if (this.region.area === 'scene') {
-      this.region['points'] = []
-      this.regionType = 'scene'
-    }
-    else if (this.region.area === 'circle') {
-      this.regionType = 'circle'
-    }
-    else {
-      this.regionType = 'poly'
+    if (this.region.area === "scene") {
+      this.region["points"] = [];
+      this.regionType = "scene";
+    } else if (this.region.area === "circle") {
+      this.regionType = "circle";
+    } else {
+      this.regionType = "poly";
     }
   }
 
   createShape() {
     this.extrudeSettings = {
       depth: this.height,
-      bevelEnabled: false
+      bevelEnabled: false,
     };
     this.setOpacity = true;
     this.material = new THREE.MeshLambertMaterial({
       color: this.color,
       transparent: true,
-      opacity: this.opacity
+      opacity: this.opacity,
     });
     this.scaleFactor = this.height;
     this.setPoints();
@@ -69,16 +60,18 @@ export default class SceneRegion extends THREE.Object3D {
     } else if (this.regionType === 'circle') {
       let cylinderGeometry = null;
       if (this.region.hasOwnProperty("center")) {
-        cylinderGeometry = this.createCircle(this.region.center[0], this.region.center[1])
-      }
-      else {
-        cylinderGeometry = this.createCircle(this.region.x, this.region.y)
+        cylinderGeometry = this.createCircle(
+          this.region.center[0],
+          this.region.center[1],
+        );
+      } else {
+        cylinderGeometry = this.createCircle(this.region.x, this.region.y);
       }
       this.shape = new THREE.Mesh(cylinderGeometry, this.material);
     }
     // Set render order to ensure regions are rendered before blocks
     this.shape.renderOrder = 1;
-    this.type = 'region';
+    this.type = "region";
   }
 
   setPoints() {
@@ -86,13 +79,13 @@ export default class SceneRegion extends THREE.Object3D {
       throw new Error("Region is invalid");
     }
 
-    if (this.regionType === 'poly') {
-      this.region.points.forEach(p => {
+    if (this.regionType === "poly") {
+      this.region.points.forEach((p) => {
         p.push(0);
         this.points.push(new THREE.Vector3(...p));
       });
     }
-    if (this.regionType === 'circle') {
+    if (this.regionType === "circle") {
       for (let i = 0; i <= MAX_SEGMENTS; i++) {
         const theta = (i / MAX_SEGMENTS) * Math.PI * 2;
         const x = this.region.radius * Math.cos(theta);
@@ -186,11 +179,10 @@ export default class SceneRegion extends THREE.Object3D {
   }
 
   changeGeometry(geometry) {
-    if (this.hasOwnProperty('shape') && this.shape !== null) {
+    if (this.hasOwnProperty("shape") && this.shape !== null) {
       this.shape.geometry.dispose();
       this.shape.geometry = geometry;
-    }
-    else {
+    } else {
       this.shape = new THREE.Mesh(geometry, this.material);
       this.add(this.shape);
     }
@@ -211,12 +203,11 @@ export default class SceneRegion extends THREE.Object3D {
     if (this.points && this.points.length > 0) {
       let x = this.points[0].x;
       let y = this.points[1].y;
-      if (this.regionType === 'circle') {
+      if (this.regionType === "circle") {
         if (this.region.hasOwnProperty("center")) {
           x = this.region.center[0];
           y = this.region.center[1];
-        }
-        else {
+        } else {
           x = this.region.x;
           y = this.region.y;
         }
@@ -225,41 +216,42 @@ export default class SceneRegion extends THREE.Object3D {
       this.textPos = {
         x: x,
         y: y,
-        z: this.height
+        z: this.height,
       };
-      this.drawObj.createTextObject(this.name, this.textPos)
+      this.drawObj
+        .createTextObject(this.name, this.textPos)
         .then((textMesh) => {
           this.add(textMesh);
         });
-    };
+    }
     this.regionControls.addToScene();
     this.regionControls.addControlPanel(this.regionsFolder);
     this.controlsFolder = this.regionControls.controlsFolder;
-    this.disableFields(['name']);
+    this.disableFields(["name"]);
 
     if (this.isStaff === null) {
       let fields = Object.keys(this.regionControls.panelSettings);
       this.disableFields(fields);
-      this.executeOnControl('opacity', (control) => { control[0].domElement.classList.add('disabled') });
+      this.executeOnControl("opacity", (control) => {
+        control[0].domElement.classList.add("disabled");
+      });
     }
   }
 
   createGeometry(data) {
     this.region = data;
     let geometry = null;
-    if (data.area === 'circle') {
-      this.regionType = 'circle';
+    if (data.area === "circle") {
+      this.regionType = "circle";
       this.setPoints();
       geometry = this.createCircle(data.x, data.y);
       this.changeGeometry(geometry);
-    }
-    else if (data.area === 'poly') {
-      this.regionType = 'poly';
+    } else if (data.area === "poly") {
+      this.regionType = "poly";
       this.setPoints();
       geometry = this.createPoly();
       this.changeGeometry(geometry);
-    }
-    else {
+    } else {
       this.remove(this.shape);
       this.shape = null;
     }

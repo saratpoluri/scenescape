@@ -1,13 +1,6 @@
-# Copyright (C) 2021-2025 Intel Corporation
-#
-# This software and the related documents are Intel copyrighted materials,
-# and your use of them is governed by the express license under which they
-# were provided to you ("License"). Unless the License provides otherwise,
-# you may not use, modify, copy, publish, distribute, disclose or transmit
-# this software or the related documents without Intel's prior written permission.
-#
-# This software and the related documents are provided as is, with no express
-# or implied warranties, other than those that are expressly stated in the License.
+# SPDX-FileCopyrightText: (C) 2021 - 2025 Intel Corporation
+# SPDX-License-Identifier: LicenseRef-Intel-Edge-Software
+# This file is licensed under the Limited Edge Software Distribution License Agreement.
 
 ARG RUNTIME_OS_IMAGE=ubuntu:22.04
 
@@ -78,6 +71,7 @@ RUN : \
         libpython3.10 \
         netbase \
         python3-pip \
+        sudo \
     && rm -rf /usr/lib/x86_64-linux-gnu/libLLVM-15.so.1 \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -90,17 +84,17 @@ RUN : \
 # TODO: uncomment when issue with accessing the secrets is resolved
 # USER $WSUSER
 
-# copy installed scenescape packages from the previous stages
-COPY --chown=$WSUSER:$WSUSER --from=scenescape-common-base /usr/local/lib/python${PYTHON_VERSION}/dist-packages/fast_geometry /usr/local/lib/python${PYTHON_VERSION}/dist-packages/fast_geometry
-COPY --chown=$WSUSER:$WSUSER --from=scenescape-common-base /usr/local/lib/python${PYTHON_VERSION}/dist-packages/scene_common /usr/local/lib/python${PYTHON_VERSION}/dist-packages/scene_common
-COPY --chown=$WSUSER:$WSUSER --from=scenescape-controller-builder ${BUILD_ENV_DIR}/lib/python${PYTHON_VERSION}/site-packages/controller /usr/local/lib/python${PYTHON_VERSION}/dist-packages/controller
-COPY --chown=$WSUSER:$WSUSER --from=scenescape-controller-builder ${BUILD_ENV_DIR}/lib/python${PYTHON_VERSION}/site-packages/robot_vision /usr/local/lib/python${PYTHON_VERSION}/dist-packages/robot_vision
-
 # install only required runtime dependencies
 COPY controller/requirements-runtime.txt /tmp
 RUN : \
     && pip3 install --upgrade --no-cache-dir -r /tmp/requirements-runtime.txt \
     && rm -rf /tmp/requirements-runtime.txt
+
+# copy installed scenescape packages from the previous stages
+COPY --chown=$WSUSER:$WSUSER --from=scenescape-common-base /usr/local/lib/python${PYTHON_VERSION}/dist-packages/fast_geometry /usr/local/lib/python${PYTHON_VERSION}/dist-packages/fast_geometry
+COPY --chown=$WSUSER:$WSUSER --from=scenescape-common-base /usr/local/lib/python${PYTHON_VERSION}/dist-packages/scene_common /usr/local/lib/python${PYTHON_VERSION}/dist-packages/scene_common
+COPY --chown=$WSUSER:$WSUSER --from=scenescape-controller-builder ${BUILD_ENV_DIR}/lib/python${PYTHON_VERSION}/site-packages/controller /usr/local/lib/python${PYTHON_VERSION}/dist-packages/controller
+COPY --chown=$WSUSER:$WSUSER --from=scenescape-controller-builder ${BUILD_ENV_DIR}/lib/python${PYTHON_VERSION}/site-packages/robot_vision /usr/local/lib/python${PYTHON_VERSION}/dist-packages/robot_vision
 
 COPY --chown=$WSUSER:$WSUSER ./controller/src/schema/metadata.schema.json $SCENESCAPE_HOME/schema/metadata.schema.json
 COPY --chown=$WSUSER:$WSUSER ./controller/config/tracker-config.json $SCENESCAPE_HOME/tracker-config.json
@@ -109,3 +103,15 @@ COPY --chown=$WSUSER:$WSUSER ./controller/src/controller-cmd $SCENESCAPE_HOME/co
 COPY --chown=$WSUSER:$WSUSER ./controller/src/controller-init /usr/local/bin/
 
 ENTRYPOINT ["/usr/local/bin/controller-init"]
+
+# ---------- Controller Test Stage ------------------
+# This stage is meant to be used for test execution (not for final runtime)
+FROM scenescape-controller-runtime AS scenescape-controller-test
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python test dependencies
+RUN pip3 install --upgrade --no-cache-dir coverage pytest
+
+RUN : \
+    ; eval WSHOME=~$WSUSER \
+    ;

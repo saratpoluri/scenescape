@@ -1,17 +1,9 @@
-# Copyright (C) 2023-2024 Intel Corporation
-#
-# This software and the related documents are Intel copyrighted materials,
-# and your use of them is governed by the express license under which they
-# were provided to you ("License"). Unless the License provides otherwise,
-# you may not use, modify, copy, publish, distribute, disclose or transmit
-# this software or the related documents without Intel's prior written permission.
-#
-# This software and the related documents are provided as is, with no express
-# or implied warranties, other than those that are expressly stated in the License.
+# SPDX-FileCopyrightText: (C) 2023 - 2025 Intel Corporation
+# SPDX-License-Identifier: LicenseRef-Intel-Edge-Software
+# This file is licensed under the Limited Edge Software Distribution License Agreement.
 
 import hashlib
 import json
-import os
 
 from django import forms
 from django.conf import settings
@@ -89,6 +81,9 @@ class SceneUpdateForm(ModelForm):
         self.instance.polycam_hash = file_hash
     else:
       self.instance.polycam_hash = ""
+
+    if cleaned_data['output_lla'] and (cleaned_data.get('map_corners_lla') is None or cleaned_data.get('map') is None):
+      raise forms.ValidationError("If 'Output geospatial coordinates' is enabled then map corners LLA and map file are required.")
     return cleaned_data
 
 class SingletonForm(forms.Form):

@@ -1,15 +1,8 @@
-// Copyright (C) 2023-2024 Intel Corporation
-//
-// This software and the related documents are Intel copyrighted materials,
-// and your use of them is governed by the express license under which they
-// were provided to you ("License"). Unless the License provides otherwise,
-// you may not use, modify, copy, publish, distribute, disclose or transmit
-// this software or the related documents without Intel's prior written permission.
-//
-// This software and the related documents are provided as is, with no express
-// or implied warranties, other than those that are expressly stated in the License.
+// SPDX-FileCopyrightText: (C) 2023 - 2025 Intel Corporation
+// SPDX-License-Identifier: LicenseRef-Intel-Edge-Software
+// This file is licensed under the Limited Edge Software Distribution License Agreement.
 
-'use strict';
+"use strict";
 
 import {
   APP_NAME,
@@ -82,8 +75,8 @@ function getColorForValue(roi_id, value, sectors) {
   return color_for_occupancy;
 }
 async function checkBrokerConnections() {
-  const urlInsecure = 'wss://' + window.location.host + '/mqtt-insecure';
-  const urlSecure = 'wss://' + window.location.host + '/mqtt';
+  const urlInsecure = "wss://" + window.location.host + "/mqtt-insecure";
+  const urlSecure = "wss://" + window.location.host + "/mqtt";
 
   const promises = [
     checkWebSocketConnection(urlInsecure),  // Check insecure port
@@ -325,7 +318,6 @@ async function checkBrokerConnections() {
         $("#snapshot").trigger("click");
       }
     }
-
   } else {
     console.log("Neither port is open.");
   }
@@ -366,26 +358,23 @@ function initArea(a) {
 
     if ($(this).is(":checked")) {
       $pane.show();
-    }
-    else {
+    } else {
       $pane.hide();
     }
   });
 
   if ($(a).val() == "poly") {
-    if (!$("#id_rois").val() || $("#id_rois").val() == '[]') {
+    if (!$("#id_rois").val() || $("#id_rois").val() == "[]") {
       addPoly();
     }
     $(".roi").show();
-  }
-  else {
+  } else {
     $(".roi").hide();
   }
 
   if ($(a).val() == "circle") {
     $(".sensor_r").show();
-  }
-  else {
+  } else {
     $(".sensor_r").hide();
   }
 }
@@ -398,8 +387,7 @@ function numberRois() {
 
     if (text) {
       text.node.innerText = n + 1;
-    }
-    else {
+    } else {
       var id = e.attr("id");
       const roi_group_points = e.select("polygon").attr("points");
       var center = polyCenter(roi_group_points);
@@ -414,8 +402,7 @@ function numberRois() {
 
   if (groups.length > 0) {
     $("#no-regions").hide();
-  }
-  else {
+  } else {
     $("#no-regions").show();
   }
 
@@ -438,8 +425,7 @@ function numberTripwires() {
 
   if (groups.length > 0) {
     $("#no-tripwires").hide();
-  }
-  else {
+  } else {
     $("#no-tripwires").show();
   }
 
@@ -455,18 +441,16 @@ function numberTabs() {
   });
 }
 
-
 // Turn the regions of interest into a string for saving to the database
 function stringifyRois() {
   rois = [];
   var groups = svgCanvas.selectAll(".roi");
 
   groups.forEach(function (g) {
-
     var i = g.attr("id");
     var title = $("#form-" + i + " input").val();
     var p = g.select("polygon");
-    var region_uuid = i.split('_')[1]
+    var region_uuid = i.split("_")[1];
     points = p.attr("points");
 
     // Back end expects array of [x,y] tuples, so compose tuples array from poly points
@@ -478,9 +462,8 @@ function stringifyRois() {
       if (n % 2 === 0) {
         tuple = [];
         tuple[0] = parseFloat(point / scale);
-      }
-      else {
-        tuple[1] = parseFloat((scene_y_max - point) / scale)
+      } else {
+        tuple[1] = parseFloat((scene_y_max - point) / scale);
         tuples.push(tuple);
       }
     });
@@ -492,7 +475,9 @@ function stringifyRois() {
     const buffer = parseFloat(formElement.querySelector(".roi-buffer")?.value) || 0.0;
 
     var roi_sectors = [];
-    var input_mins = document.querySelectorAll("#form-" + i + " [class$='_min']");
+    var input_mins = document.querySelectorAll(
+      "#form-" + i + " [class$='_min']",
+    );
     for (var j = 0; j < input_mins.length; j++) {
       var sector = {};
       var color = input_mins[j].className.split("_")[0];
@@ -511,7 +496,9 @@ function stringifyRois() {
       buffer_size: buffer
     };
 
-    const range_max_element = document.querySelector("#form-" + i + " [class$='_max']");
+    const range_max_element = document.querySelector(
+      "#form-" + i + " [class$='_max']",
+    );
     if (range_max_element) {
       var range_max = parseInt(range_max_element.value);
       entry.range_max = range_max;
@@ -530,19 +517,27 @@ function stringifyTripwires() {
   var groups = svgCanvas.selectAll(".tripwire");
 
   groups.forEach(function (g) {
-
     var i = g.attr("id");
     var title = $("#form-" + i + " input").val();
     var l = g.select(".tripline");
-    var trip_uuid = i.split('_')[1]
-
+    var trip_uuid = i.split("_")[1];
 
     // Compose tripwire entry just like polygons
     var entry = {
       title: title,
       uuid: trip_uuid,
-      points: [pixelsToMeters([l.node.x1.baseVal.value, l.node.y1.baseVal.value], scale, scene_y_max),
-      pixelsToMeters([l.node.x2.baseVal.value, l.node.y2.baseVal.value], scale, scene_y_max)]
+      points: [
+        pixelsToMeters(
+          [l.node.x1.baseVal.value, l.node.y1.baseVal.value],
+          scale,
+          scene_y_max,
+        ),
+        pixelsToMeters(
+          [l.node.x2.baseVal.value, l.node.y2.baseVal.value],
+          scale,
+          scene_y_max,
+        ),
+      ],
     };
 
     tripwires.push(entry);
@@ -555,12 +550,14 @@ function stringifyTripwires() {
 function stringifySingletonColorRange() {
   let color_ranges = [];
 
-  var input_min = document.querySelectorAll("#singleton_sectors > input[id$='_min']");
+  var input_min = document.querySelectorAll(
+    "#singleton_sectors > input[id$='_min']",
+  );
 
   for (const input_ele of input_min) {
     color_ranges.push({
       color: input_ele.className.split("_")[0],
-      color_min: parseInt(input_ele.value)
+      color_min: parseInt(input_ele.value),
     });
   }
 
@@ -568,11 +565,10 @@ function stringifySingletonColorRange() {
   const range_max = parseInt(range_max_value);
 
   color_ranges.push({
-    range_max: range_max
+    range_max: range_max,
   });
 
   $("#id_sectors").val(JSON.stringify(color_ranges));
-
 }
 
 // Get the center coordinate of a polygon
@@ -586,16 +582,12 @@ function polyCenter(pts) {
     pts.forEach(function (p, i) {
       p = parseInt(p); // Force integer math :(
 
-      if (i % 2 === 0)
-        center[0] = center[0] + p;
-      else
-        center[1] = center[1] + p;
-
+      if (i % 2 === 0) center[0] = center[0] + p;
+      else center[1] = center[1] + p;
     });
 
     center[0] = parseInt(center[0] / numPts);
     center[1] = parseInt(center[1] / numPts);
-
   }
 
   return center;
@@ -612,8 +604,7 @@ function editPolygon(group) {
     });
 
     stringifyRois();
-  }
-  else {
+  } else {
     editing = true;
 
     circles.forEach(function (c) {
@@ -669,7 +660,7 @@ function move(dx, dy) {
 
   this.attr({
     cx: this.data("origX") + dx,
-    cy: this.data("origY") + dy
+    cy: this.data("origY") + dy,
   });
 
   circles.forEach(function (c) {
@@ -683,8 +674,8 @@ function move(dx, dy) {
   var center = polyCenter(points);
   if (text) {
     text.attr({
-      "x": center[0],
-      "y": center[1]
+      x: center[0],
+      y: center[1],
     });
   }
 }
@@ -694,7 +685,7 @@ function move1(dx, dy) {
   if (this.type === "circle") {
     this.attr({
       cx: this.data("origX") + dx,
-      cy: this.data("origY") + dy
+      cy: this.data("origY") + dy,
     });
 
     // Move the circle measurement area as well
@@ -706,7 +697,7 @@ function move1(dx, dy) {
   else {
     this.attr({
       x: this.data("origX") + dx,
-      y: this.data("origY") + dy
+      y: this.data("origY") + dy,
     });
 
     // Move the circle measurement area as well, centered on the icon
@@ -722,17 +713,16 @@ function start() {
   if (this.type === "circle") {
     this.data("origX", parseInt(this.attr("cx")));
     this.data("origY", parseInt(this.attr("cy")));
-  }
-  else {
+  } else {
     this.data("origX", parseInt(this.attr("x")));
     this.data("origY", parseInt(this.attr("y")));
   }
-};
+}
 
 function stop() {
   dragging = false;
   points = [];
-};
+}
 
 function stop1() {
   dragging = false;
@@ -740,12 +730,11 @@ function stop1() {
   if (this.type === "circle") {
     $("#id_sensor_x").val(this.attr("cx"));
     $("#id_sensor_y").val(this.attr("cy"));
-  }
-  else {
+  } else {
     $("#id_sensor_x").val(parseInt(this.attr("x")) + icon_size / 2);
     $("#id_sensor_y").val(parseInt(this.attr("y")) + icon_size / 2);
   }
-};
+}
 
 function dragTripwire(dx, dy) {
   var group = this.parent();
@@ -753,34 +742,32 @@ function dragTripwire(dx, dy) {
 
   this.attr({
     cx: this.data("origX") + dx,
-    cy: this.data("origY") + dy
+    cy: this.data("origY") + dy,
   });
-
 
   if (this.attr("point") == 0) {
     line.attr({
       x1: this.data("origX") + dx,
-      y1: this.data("origY") + dy
+      y1: this.data("origY") + dy,
     });
-  }
-  else if (this.attr("point") == 1) {
+  } else if (this.attr("point") == 1) {
     line.attr({
       x2: this.data("origX") + dx,
-      y2: this.data("origY") + dy
+      y2: this.data("origY") + dy,
     });
   }
 
   updateArrow(group);
-};
+}
 
 function startDragTripwire() {
   this.data("origX", parseInt(this.attr("cx")));
   this.data("origY", parseInt(this.attr("cy")));
-};
+}
 
 function stopDragTripwire() {
   stringifyTripwires();
-};
+}
 
 function newTripwire(e, index, type = "tripwire") {
   var i = type + "_" + index;
@@ -807,7 +794,12 @@ function newTripwire(e, index, type = "tripwire") {
     }
     g.attr("id", i).addClass(type);
 
-    var line = g.line(e.points[0][0], e.points[0][1], e.points[1][0], e.points[1][1]);
+    var line = g.line(
+      e.points[0][0],
+      e.points[0][1],
+      e.points[1][0],
+      e.points[1][1],
+    );
     line.addClass("tripline");
 
     e.points.forEach(function (p, n) {
@@ -823,34 +815,34 @@ function newTripwire(e, index, type = "tripwire") {
       $("#tripwire-template")
         .clone(true)
         .attr({
-          "id": "form-" + i,
-          "for": i
+          id: "form-" + i,
+          for: i,
         })
         .appendTo("#tripwire-fields")
         .find("input.tripwire-title")
         .val(e.title)
         .attr({
-          "id": "input-" + i,
-          "aria-labelledby": "label-" + i
+          id: "input-" + i,
+          "aria-labelledby": "label-" + i,
         })
-        .closest(".input-group").find("label")
+        .closest(".input-group")
+        .find("label")
         .attr({
-          "id": "label-" + i,
-          "for": "input-" + i
+          id: "label-" + i,
+          for: "input-" + i,
         })
-        .closest(".input-group").find(".topic")
-        .text(APP_NAME + "/event/tripwire/"
-          + scene_id + "/"
-          + index + "/objects");
-    }
-    else {
+        .closest(".input-group")
+        .find(".topic")
+        .text(
+          APP_NAME + "/event/tripwire/" + scene_id + "/" + index + "/objects",
+        );
+    } else {
       var text = g.select("text");
-      text.textContent = e.from_child_scene + ' ' + e.title;
+      text.textContent = e.from_child_scene + " " + e.title;
     }
   }
   numberTripwires();
-
-};
+}
 
 // Function to get tripwire/roi form values
 function getRoiValues(id, roi) {
@@ -860,8 +852,7 @@ function getRoiValues(id, roi) {
     cur_rois.push(form_rois[i].value.trim());
   }
   return cur_rois;
-};
-
+}
 
 function find_duplicates(curr_roi) {
   const nameCounts = new Map();
@@ -893,30 +884,31 @@ function updateArrow(group) {
   x2 = parseInt(group.select(".point_1").attr("cx"));
   y2 = parseInt(group.select(".point_1").attr("cy"));
 
-  var v = [(x2 - x1), (y2 - y1)];
-  var magV = Math.sqrt((v[0] * v[0]) + (v[1] * v[1]));
+  var v = [x2 - x1, y2 - y1];
+  var magV = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
 
   var a = [-l * (v[1] / magV), l * (v[0] / magV)];
-  var mid = [x1 + ((x2 - x1) / 2), y1 + ((y2 - y1) / 2)];
+  var mid = [x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2];
 
   if (arrow == null) {
-    arrow = group.line(mid[0], mid[1], mid[0] + a[0], mid[1] + a[1]).addClass("arrow");
+    arrow = group
+      .line(mid[0], mid[1], mid[0] + a[0], mid[1] + a[1])
+      .addClass("arrow");
     label = group.text(mid[0] - a[0], mid[1] - a[1], "").addClass("label");
-  }
-  else {
+  } else {
     arrow.attr({
       x1: mid[0],
       y1: mid[1],
       x2: mid[0] + a[0],
-      y2: mid[1] + a[1]
+      y2: mid[1] + a[1],
     });
 
     label.attr({
       x: mid[0] - a[0],
-      y: mid[1] - a[1]
+      y: mid[1] - a[1],
     });
   }
-};
+}
 
 function removeFormElementsForUI(id) {
   id = id + "_wrapper";
@@ -928,27 +920,44 @@ function removeFormElementsForUI(id) {
 
 function toggleAsset3D() {
   var model3D = $("#id_model_3d").val();
-  var hasAsset = $('#model_3d_wrapper').find('a').length;
+  var hasAsset = $("#model_3d_wrapper").find("a").length;
 
-  var assetForm = document.getElementById("asset_create_form") || document.getElementById("asset_update_form");
+  var assetForm =
+    document.getElementById("asset_create_form") ||
+    document.getElementById("asset_update_form");
   var saveButton = document.getElementById("save_asset");
   saveButton.remove();
   savedElements.push(saveButton);
-  savedElements.forEach(element => {
-    assetForm.append(element)
+  savedElements.forEach((element) => {
+    assetForm.append(element);
   });
-  savedElements = []
+  savedElements = [];
 
   var asset_fields_with_no_model = ["mark_color"];
-  var asset_fields_with_model = ["scale", "rotation_x", "rotation_y", "rotation_z", "translation_x", "translation_y", "translation_z"];
+  var asset_fields_with_model = [
+    "scale",
+    "rotation_x",
+    "rotation_y",
+    "rotation_z",
+    "translation_x",
+    "translation_y",
+    "translation_z",
+  ];
 
   if (model3D || hasAsset) {
     asset_fields_with_no_model.map(removeFormElementsForUI);
-    updateElements(asset_fields_with_model.map(v => "id_" + v), 'required', true)
+    updateElements(
+      asset_fields_with_model.map((v) => "id_" + v),
+      "required",
+      true,
+    );
   } else {
     asset_fields_with_model.map(removeFormElementsForUI);
-    updateElements(asset_fields_with_no_model.map(v => "id_" + v), 'required', true)
-
+    updateElements(
+      asset_fields_with_no_model.map((v) => "id_" + v),
+      "required",
+      true,
+    );
   }
 }
 
@@ -957,22 +966,28 @@ function addSavedCalibrationFields() {
   var saveButton = document.getElementById("save_scene_updates");
   saveButton.remove();
   savedElements.push(saveButton);
-  savedElements.forEach(element => {
-    sceneUpdateForm.append(element)
+  savedElements.forEach((element) => {
+    sceneUpdateForm.append(element);
   });
-  savedElements = []
+  savedElements = [];
 }
 
 function setupCalibrationType() {
   var calibrationType = $("#id_camera_calibration").val();
-  var listOfMarkerlessComponents = ["polycam_data", "matcher",
-    "number_of_localizations", "global_feature", "local_feature",
-    "minimum_number_of_matches", "inlier_threshold"];
-  var listofApriltagComponents = ["apriltag_size"]
+  var listOfMarkerlessComponents = [
+    "polycam_data",
+    "matcher",
+    "number_of_localizations",
+    "global_feature",
+    "local_feature",
+    "minimum_number_of_matches",
+    "inlier_threshold",
+  ];
+  var listofApriltagComponents = ["apriltag_size"];
 
   switch (calibrationType) {
     case "AprilTag":
-      addSavedCalibrationFields()
+      addSavedCalibrationFields();
       listOfMarkerlessComponents.map(removeFormElementsForUI);
       break;
     case "Manual":
@@ -980,7 +995,7 @@ function setupCalibrationType() {
       listofApriltagComponents.map(removeFormElementsForUI);
       break;
     case "Markerless":
-      addSavedCalibrationFields()
+      addSavedCalibrationFields();
       listofApriltagComponents.map(removeFormElementsForUI);
       break;
   }
@@ -993,8 +1008,7 @@ function saveRois(roi_values) {
   var duplicates = find_duplicates(roi_values);
   if (duplicates.length > 0) {
     alert(duplicates.toString() + " already exists. Try a different name");
-  }
-  else {
+  } else {
     $("#roi-form").submit();
   }
 }
@@ -1005,27 +1019,31 @@ if (svgCanvas) {
     drawing = true;
 
     var offset = $("#svgout").offset();
-    var thisPoint = [parseInt(e.pageX - offset.left), parseInt(e.pageY - offset.top)];
+    var thisPoint = [
+      parseInt(e.pageX - offset.left),
+      parseInt(e.pageY - offset.top),
+    ];
 
     var circle;
 
     if ($("#svgout").hasClass("adding-roi")) {
-
       // Create group or add point to existing group
       if (!Snap.select("g.drawPoly")) {
         points = [];
         g = svgCanvas.group();
         g.addClass("drawPoly");
-        circle = g.circle(thisPoint[0], thisPoint[1], radius).addClass("start-point vertex");
-      }
-      else {
+        circle = g
+          .circle(thisPoint[0], thisPoint[1], radius)
+          .addClass("start-point vertex");
+      } else {
         if (Snap(e.target).hasClass("start-point")) {
           closePolygon();
           return;
-        }
-        else {
+        } else {
           g.select("polygon").remove();
-          circle = g.circle(thisPoint[0], thisPoint[1], radius).addClass("vertex");
+          circle = g
+            .circle(thisPoint[0], thisPoint[1], radius)
+            .addClass("vertex");
         }
       }
 
@@ -1038,12 +1056,13 @@ if (svgCanvas) {
     }
     if ($("#svgout").hasClass("adding-tripwire")) {
       if (!Snap.select("g.drawTripwire")) {
-
         // This makes a tripwire 50 pixels long by default
         var defaultLength = 50;
         var tempPoints = {
-          points: [[thisPoint[0] - (defaultLength / 2), thisPoint[1]],
-          [thisPoint[0] + (defaultLength / 2), thisPoint[1]]]
+          points: [
+            [thisPoint[0] - defaultLength / 2, thisPoint[1]],
+            [thisPoint[0] + defaultLength / 2, thisPoint[1]],
+          ],
         };
         var tripwireIndex = $(".tripwire").length;
 
@@ -1054,8 +1073,7 @@ if (svgCanvas) {
         if (tempPoints.points[1][0] > imageWidth) {
           tempPoints.points[0][0] = imageWidth - defaultLength;
           tempPoints.points[1][0] = imageWidth;
-        }
-        else if (tempPoints.points[0][0] < 0) {
+        } else if (tempPoints.points[0][0] < 0) {
           tempPoints.points[0][0] = 0;
           tempPoints.points[1][0] = defaultLength;
         }
@@ -1083,21 +1101,24 @@ function drawRoi(e, index, type) {
   });
 
   // Convert points array to string for comparison
-  var points_string = roi_points.join(',');
+  var points_string = roi_points.join(",");
 
   // Update the child roi if changed
-  if (type == 'child_roi' && document.getElementById(i)) {
-    var name_text = document.getElementById(i).querySelector('#name');
-    var hierarchy_text = document.getElementById(i).querySelector('#hierarchy');
-    var child_polygon = document.getElementById(i).querySelector('polygon')
+  if (type == "child_roi" && document.getElementById(i)) {
+    var name_text = document.getElementById(i).querySelector("#name");
+    var hierarchy_text = document.getElementById(i).querySelector("#hierarchy");
+    var child_polygon = document.getElementById(i).querySelector("polygon");
 
-    if (child_polygon.getAttribute('points') != points_string) {
-      child_polygon.setAttribute('points', points_string);
-      document.getElementById(i).querySelectorAll('circle').forEach(function (c, i) {
-        var newCenter = metersToPixels(e.points[i], scale, scene_y_max);
-        c.setAttribute('cx', newCenter[0]);
-        c.setAttribute('cy', newCenter[1]);
-      })
+    if (child_polygon.getAttribute("points") != points_string) {
+      child_polygon.setAttribute("points", points_string);
+      document
+        .getElementById(i)
+        .querySelectorAll("circle")
+        .forEach(function (c, i) {
+          var newCenter = metersToPixels(e.points[i], scale, scene_y_max);
+          c.setAttribute("cx", newCenter[0]);
+          c.setAttribute("cy", newCenter[1]);
+        });
 
       var center = polyCenter(roi_points);
       name_text.setAttribute('x', center[0]);
@@ -1137,24 +1158,25 @@ function drawRoi(e, index, type) {
       $(".roi").hide();
     }
 
-    if (type == 'roi') {
+    if (type == "roi") {
       $("#roi-template")
         .clone(true)
         .attr({
-          "id": "form-" + i,
-          "for": i
+          id: "form-" + i,
+          for: i,
         })
         .appendTo("#roi-fields")
         .find("input.roi-title")
         .val(e.title)
         .attr({
-          "id": "input-" + i,
-          "aria-labelledby": "label-" + i
+          id: "input-" + i,
+          "aria-labelledby": "label-" + i,
         })
-        .closest(".input-group").find("label")
+        .closest(".input-group")
+        .find("label")
         .attr({
-          "id": "label-" + i,
-          "for": "input-" + i
+          id: "label-" + i,
+          for: "input-" + i,
         });
 
       $("#form-" + i).find(".roi-topic > label").text("Topic:  ")
@@ -1180,12 +1202,16 @@ function drawRoi(e, index, type) {
       for (var sector in e.sectors.thresholds) {
         var color = e.sectors.thresholds[sector].color;
         var min = e.sectors.thresholds[sector].color_min;
-        $("#form-" + i).find("input." + color + "_min").val(min);
+        $("#form-" + i)
+          .find("input." + color + "_min")
+          .val(min);
       }
-      $("#form-" + i).find("input." + "range_max").val(e.sectors.range_max);
+      $("#form-" + i)
+        .find("input." + "range_max")
+        .val(e.sectors.range_max);
 
-      document.querySelectorAll('.topic-text').forEach(element => {
-        element.addEventListener('click', () => {
+      document.querySelectorAll(".topic-text").forEach((element) => {
+        element.addEventListener("click", () => {
           const text = element.textContent;
           if (navigator.clipboard !== undefined) {
             navigator.clipboard.writeText(text);
@@ -1195,8 +1221,10 @@ function drawRoi(e, index, type) {
     }
     else {
       var center = polyCenter(roi_points);
-      var nameText = g.text(center[0], center[1], e.title).attr({ id: 'name' });
-      var hierarchyText = g.text(center[0], center[1] + 15, e.from_child_scene).attr({ id: 'hierarchy' });
+      var nameText = g.text(center[0], center[1], e.title).attr({ id: "name" });
+      var hierarchyText = g
+        .text(center[0], center[1] + 15, e.from_child_scene)
+        .attr({ id: "hierarchy" });
     }
     numberRois();
   }
@@ -1221,21 +1249,20 @@ function drawSensor(sensor, index, type) {
       hierarchy_text.setAttribute('y', sensor?.y + 15);
     }
     if (sensor.area === "circle") {
-      var outer_circle = document.querySelector('#' + i + ' > .area')
-      outer_circle.setAttribute('cx', sensor.x)
-      outer_circle.setAttribute('cy', sensor.y)
-      outer_circle.setAttribute('r', sensor.radius * scale)
-    }
-    else if (sensor.area === "poly") {
+      var outer_circle = document.querySelector("#" + i + " > .area");
+      outer_circle.setAttribute("cx", sensor.x);
+      outer_circle.setAttribute("cy", sensor.y);
+      outer_circle.setAttribute("r", sensor.radius * scale);
+    } else if (sensor.area === "poly") {
       let area_points = [];
       sensor.points.forEach(function (m) {
         var p = metersToPixels(m, scale, scene_y_max);
         area_points.push(p[0], p[1]);
       });
-      var points_string = area_points.join(',');
-      var polygon = document.querySelector('#' + i + ' > .area');
-      if (polygon.getAttribute('points') != points_string) {
-        polygon.setAttribute('points', points_string);
+      var points_string = area_points.join(",");
+      var polygon = document.querySelector("#" + i + " > .area");
+      if (polygon.getAttribute("points") != points_string) {
+        polygon.setAttribute("points", points_string);
       }
     }
   }
@@ -1250,8 +1277,7 @@ function drawSensor(sensor, index, type) {
       sensor.radius = sensor.radius * scale;
       var circle = g.circle(sensor.x, sensor.y, sensor.radius).addClass("area");
       var text = g.text(sensor.x, sensor.y, "").addClass("value");
-    }
-    else if (sensor.area === "poly") {
+    } else if (sensor.area === "poly") {
       var tempPoints = [];
 
       sensor.points.forEach(function (p) {
@@ -1265,10 +1291,14 @@ function drawSensor(sensor, index, type) {
     }
 
     if ($(".sensor-icon", this).length) {
-      var image = g.image($(".sensor-icon", this).attr("src"), sensor.x - (icon_size / 2),
-        sensor.y - (icon_size / 2), icon_size, icon_size);
-    }
-    else {
+      var image = g.image(
+        $(".sensor-icon", this).attr("src"),
+        sensor.x - icon_size / 2,
+        sensor.y - icon_size / 2,
+        icon_size,
+        icon_size,
+      );
+    } else {
       if (sensor.area === "poly" || sensor.area === "scene") {
         var p = metersToPixels([sensor.x, sensor.y], scale, scene_y_max);
         sensor.x = p[0];
@@ -1277,45 +1307,48 @@ function drawSensor(sensor, index, type) {
       var circle = g.circle(sensor.x, sensor.y, 7).addClass("sensor");
     }
 
-    var nameText = g.text(sensor.x, sensor.y - 7, sensor.title).attr({ id: 'name' });
-    var hierarchyText = g.text(sensor.x, sensor.y + 15, sensor.from_child_scene).attr({ id: 'hierarchy' });
+    var nameText = g
+      .text(sensor.x, sensor.y - 7, sensor.title)
+      .attr({ id: "name" });
+    var hierarchyText = g
+      .text(sensor.x, sensor.y + 15, sensor.from_child_scene)
+      .attr({ id: "hierarchy" });
   }
 }
 
 function setColorForAllROIs() {
   const all_rois = getRoiValues("form-control roi-title", "roi");
   for (var roi of all_rois) {
-    roi = roi.split('_')[1]
+    roi = roi.split("_")[1];
     setROIColor(roi, 0);
   }
 }
 
 function setROIColor(roi_id, occupancy) {
-  var roi_polygon = document.querySelector('#roi_' + roi_id + ' polygon');
+  var roi_polygon = document.querySelector("#roi_" + roi_id + " polygon");
   if (roi_polygon) {
     if (is_coloring_enabled) {
       var color = getColorForValue(roi_id, occupancy, roi_color_sectors);
       roi_polygon.style.fill = color;
-    }
-    else {
-      roi_polygon.style.fill = 'white';
+    } else {
+      roi_polygon.style.fill = "white";
     }
   }
 }
 
 function setSensorColor(sensor_id, value, area) {
-  const sensor_area = area === "circle"
-    ? document.querySelector(`#sensor_${sensor_id} circle`)
-    : area === "poly"
-      ? document.querySelector(`#sensor_${sensor_id} polygon`)
-      : null;
+  const sensor_area =
+    area === "circle"
+      ? document.querySelector(`#sensor_${sensor_id} circle`)
+      : area === "poly"
+        ? document.querySelector(`#sensor_${sensor_id} polygon`)
+        : null;
   if (sensor_area) {
     if (is_coloring_enabled) {
       var color = getColorForValue(sensor_id, value, singleton_color_sectors);
       sensor_area.style.fill = color;
-    }
-    else {
-      sensor_area.style.fill = 'white';
+    } else {
+      sensor_area.style.fill = "white";
     }
   }
 }
@@ -1327,32 +1360,37 @@ function setupSceneRotationTranslationFields(event = null) {
   } else {
     var map_file_url = document.querySelector("#map_wrapper a");
     if (map_file_url) {
-      map_file_name = map_file_url.getAttribute("href").split('/').pop();
+      map_file_name = map_file_url.getAttribute("href").split("/").pop();
     } else {
       map_file_name = "";
     }
   }
-  var uploaded_file_ext = map_file_name.split('.').pop();
+  var uploaded_file_ext = map_file_name.split(".").pop();
   if (uploaded_file_ext == "glb" || uploaded_file_ext == "zip") {
     scene_rotation_translation_config = false;
-  }
-  else {
+  } else {
     scene_rotation_translation_config = true;
   }
 
-  var rotation_translation_elements = ["rotation_x_wrapper", "rotation_y_wrapper", "rotation_z_wrapper",
-    "translation_x_wrapper", "translation_y_wrapper", "translation_z_wrapper"];
+  var rotation_translation_elements = [
+    "rotation_x_wrapper", 
+    "rotation_y_wrapper", 
+    "rotation_z_wrapper",
+    "translation_x_wrapper", 
+    "translation_y_wrapper", 
+    "translation_z_wrapper"
+  ];
   updateElements(rotation_translation_elements, "hidden", scene_rotation_translation_config);
 }
 
 $(document).ready(function () {
-  const loginButton = document.getElementById('login-submit');
-  const spinner = document.getElementById('login-spinner');
-  const loginText = document.getElementById('login-text');
+  const loginButton = document.getElementById("login-submit");
+  const spinner = document.getElementById("login-spinner");
+  const loginText = document.getElementById("login-text");
   function checkDatabaseReady() {
     fetch(`${REST_URL}/database-ready`)
-      .then(response => response.json())
-      .then(data => {
+      .then((response) => response.json())
+      .then((data) => {
         if (data.databaseReady) {
           loginButton.disabled = false;
           loginText.textContent = "Sign In";
@@ -1364,7 +1402,9 @@ $(document).ready(function () {
           setTimeout(checkDatabaseReady, 5000);
         }
       })
-      .catch(error => console.error('Error checking database readiness:', error));
+      .catch((error) =>
+        console.error("Error checking database readiness:", error),
+      );
   }
   if (loginButton) {
     checkDatabaseReady();
@@ -1376,21 +1416,20 @@ $(document).ready(function () {
 
   const coloring_toggle = $("input#coloring-switch");
   if (coloring_toggle.length) {
-    is_coloring_enabled = localStorage.getItem('visualize_rois') === 'true';
-    coloring_toggle.prop('checked', is_coloring_enabled);
+    is_coloring_enabled = localStorage.getItem("visualize_rois") === "true";
+    coloring_toggle.prop("checked", is_coloring_enabled);
     setColorForAllROIs();
   }
 
   coloring_toggle.on("change", function () {
-    const isChecked = $(this).is(':checked');
+    const isChecked = $(this).is(":checked");
     is_coloring_enabled = isChecked;
-    localStorage.setItem('visualize_rois', isChecked);
+    localStorage.setItem("visualize_rois", isChecked);
     setColorForAllROIs();
   });
 
   // Operations to take after images are loaded
   $(".content").imagesLoaded(function () {
-
     // Camera calibration interface
     initializeCalibrationSettings();
 
@@ -1403,7 +1442,6 @@ $(document).ready(function () {
       var $child_rois = $("#id_child_rois");
       var $child_tripwires = $("#child_tripwires");
       var $child_sensors = $("#child_sensors");
-
 
       var image_src = $image.attr("src");
 
@@ -1426,15 +1464,15 @@ $(document).ready(function () {
         var sensor_r = $("#id_sensor_r").attr("value");
 
         // Place sensor in the middle of the scene by default
-        if (!sensor_x | sensor_x == 'None') {
+        if (!sensor_x | (sensor_x == "None")) {
           sensor_x = parseInt(image_w / 2);
           $("#id_sensor_x").val(sensor_x);
         }
-        if (!sensor_y | sensor_y == 'None') {
+        if (!sensor_y | (sensor_y == "None")) {
           sensor_y = parseInt(scene_y_max / 2);
           $("#id_sensor_y").val(sensor_y);
         }
-        if (!sensor_r | sensor_r == 'None') {
+        if (!sensor_r | (sensor_r == "None")) {
           sensor_r = parseInt(scene_y_max / 2);
         }
 
@@ -1442,7 +1480,7 @@ $(document).ready(function () {
         $("#id_sensor_r").attr({
           min: 0,
           max: parseInt(image_w / 2),
-          value: sensor_r
+          value: sensor_r,
         });
 
         // Add the point
@@ -1453,8 +1491,13 @@ $(document).ready(function () {
           var sensor = svgCanvas.circle(sensor_x, sensor_y, 7);
         }
         else {
-          var sensor = svgCanvas.image(sensor_icon, sensor_x - (icon_size / 2),
-            sensor_y - (icon_size / 2), icon_size, icon_size);
+          var sensor = svgCanvas.image(
+            sensor_icon,
+            sensor_x - (icon_size / 2),
+            sensor_y - (icon_size / 2),
+            icon_size,
+            icon_size
+          );
         }
 
         sensor.addClass("is-handle sensor");
@@ -1493,7 +1536,7 @@ $(document).ready(function () {
           tripwires = JSON.parse($tripwires.val());
 
           // Convert meters to pixels for displaying the tripwire
-          tripwires.forEach(t => {
+          tripwires.forEach((t) => {
             t.points[0] = metersToPixels(t.points[0], scale, scene_y_max);
             t.points[1] = metersToPixels(t.points[1], scale, scene_y_max);
           });
@@ -1508,13 +1551,13 @@ $(document).ready(function () {
         if ($child_rois.val()) {
           child_rois = JSON.parse($child_rois.val());
           child_tripwires = JSON.parse($child_tripwires.val());
-          child_sensors = JSON.parse($child_sensors.val())
+          child_sensors = JSON.parse($child_sensors.val());
 
           child_rois.forEach(function (e, index) {
             drawRoi(e, e.uuid, "child_roi");
           });
 
-          child_tripwires.forEach(t => {
+          child_tripwires.forEach((t) => {
             t.points[0] = metersToPixels(t.points[0], scale, scene_y_max);
             t.points[1] = metersToPixels(t.points[1], scale, scene_y_max);
           });
@@ -1525,7 +1568,7 @@ $(document).ready(function () {
 
           child_sensors.forEach(function (e, index) {
             drawSensor(e, e.title, "child_sensor");
-          })
+          });
         }
 
         if (!$("#map").hasClass("singletonCal")) {
@@ -1535,14 +1578,16 @@ $(document).ready(function () {
 
         // Save ROI's
         $("#save-rois, #save-trips").on("click", function (event) {
-          var tripwire_values = getRoiValues("form-control tripwire-title", "tripwire");
+          var tripwire_values = getRoiValues(
+            "form-control tripwire-title",
+            "tripwire",
+          );
           var rois_values = getRoiValues("form-control roi-title", "roi");
-          rois_values = rois_values.concat(tripwire_values)
+          rois_values = rois_values.concat(tripwire_values);
           if (event.target.id == "save-trips") {
-            saveRois(rois_values)
-          }
-          else if (event.target.id == "save-rois") {
-            saveRois(rois_values)
+            saveRois(rois_values);
+          } else if (event.target.id == "save-rois") {
+            saveRois(rois_values);
           }
         });
       }
@@ -1557,7 +1602,7 @@ $(document).ready(function () {
 
       $(".roi-remove").on("click", function () {
         var $group = $(this).closest(".form-roi");
-        var r = confirm('Are you sure you wish to remove this ROI?');
+        var r = confirm("Are you sure you wish to remove this ROI?");
 
         if (r == true) {
           $("#" + $group.attr("for")).remove();
@@ -1569,7 +1614,7 @@ $(document).ready(function () {
 
       $(".tripwire-remove").on("click", function () {
         var $group = $(this).closest(".form-tripwire");
-        var r = confirm('Are you sure you wish to remove this tripwire?');
+        var r = confirm("Are you sure you wish to remove this tripwire?");
 
         if (r == true) {
           $("#" + $group.attr("for")).remove();
@@ -1585,7 +1630,6 @@ $(document).ready(function () {
 
   // MQTT management (see https://github.com/mqttjs/MQTT.js)
   if ($("#broker").length != 0) {
-
     // Set broker value to the hostname of the current page
     // since broker runs on web server by default
     var host = window.location.hostname;
@@ -1594,7 +1638,7 @@ $(document).ready(function () {
     var protocol = window.location.protocol;
 
     // If running HTTPS on a custom port, fix up the WSS connection string
-    if ((port) && (protocol == "https:")) {
+    if (port && protocol == "https:") {
       broker = broker.replace("localhost", host + ":" + port);
     }
     // If running HTTPS without a port or HTTP in developer mode, fix up the host name only
@@ -1639,23 +1683,20 @@ $(document).ready(function () {
 
   $("#fullscreen").on("click", function () {
     if (fullscreen) {
-      $(".scene-map, .wrapper")
-        .addClass("container-fluid");
+      $(".scene-map, .wrapper").addClass("container-fluid");
       $("#svgout").removeClass("fullscreen");
       $("body").css({
         "padding-top": "5rem",
-        "padding-bottom": "5rem"
+        "padding-bottom": "5rem",
       });
       $(".hide-fullscreen").show();
       $(this).val("^");
       fullscreen = false;
-    }
-    else {
-      $(".scene-map, .wrapper")
-        .removeClass("container-fluid");
+    } else {
+      $(".scene-map, .wrapper").removeClass("container-fluid");
       $("body").css({
         "padding-top": "0",
-        "padding-bottom": "0"
+        "padding-bottom": "0",
       });
       $("#svgout").addClass("fullscreen");
       $(".hide-fullscreen").hide();
@@ -1665,12 +1706,12 @@ $(document).ready(function () {
   });
 
   $("input#show-trails").on("change", function () {
-    if ($(this).is(':checked')) show_trails = true;
+    if ($(this).is(":checked")) show_trails = true;
     else show_trails = false;
   });
 
   $("input#show-telemetry").on("change", function () {
-    if ($(this).is(':checked')) show_telemetry = true;
+    if ($(this).is(":checked")) show_telemetry = true;
     else show_telemetry = false;
   });
 
@@ -1686,9 +1727,14 @@ $(document).ready(function () {
 
   setupChildScene();
 
-  if (document.getElementById("assetCreateForm") || document.getElementById("assetUpdateForm")) {
-    if (document.getElementById("assetCreateForm")) $("#assetCreateForm").ready(toggleAsset3D);
-    if (document.getElementById("assetUpdateForm")) $("#assetUpdateForm").ready(toggleAsset3D);
+  if (
+    document.getElementById("assetCreateForm") ||
+    document.getElementById("assetUpdateForm")
+  ) {
+    if (document.getElementById("assetCreateForm"))
+      $("#assetCreateForm").ready(toggleAsset3D);
+    if (document.getElementById("assetUpdateForm"))
+      $("#assetUpdateForm").ready(toggleAsset3D);
     $("#id_model_3d").on("change", toggleAsset3D);
   }
 
@@ -1706,12 +1752,11 @@ $(document).ready(function () {
     document.getElementById("id_scale").required = true;
     $("#id_map").on("change", (e) => {
       var uploaded_file_name = e.target.files[0].name;
-      var uploaded_file_ext = uploaded_file_name.split('.').pop();
+      var uploaded_file_ext = uploaded_file_name.split(".").pop();
       if (uploaded_file_ext == "glb" || uploaded_file_ext == "zip") {
         document.getElementById("scale_wrapper").hidden = true;
         document.getElementById("id_scale").required = false;
-      }
-      else {
+      } else {
         document.getElementById("scale_wrapper").hidden = false;
         document.getElementById("id_scale").required = true;
       }
@@ -1719,13 +1764,13 @@ $(document).ready(function () {
   }
 
   $("#calibrate form").submit(function (event) {
-
     stringifySingletonColorRange();
 
     /* Checks that polygon is closed before submitting. */
     var poly_checked = $("#id_area_2").is(":checked");
     var poly_val = $("#id_rois").val();
-    var poly_error_message = "Polygon area is not properly configured. Make sure it has at least 3 vertices.";
+    var poly_error_message =
+      "Polygon area is not properly configured. Make sure it has at least 3 vertices.";
 
     if (poly_checked) {
       if (adding) {
@@ -1736,8 +1781,7 @@ $(document).ready(function () {
         var poly_parsed = JSON.parse(poly_val);
         if (poly_parsed[0].points.length > 2) {
           return true; // Go ahead and submit the form
-        }
-        else {
+        } else {
           alert(poly_error_message);
           $("#redraw").click();
           return false;
