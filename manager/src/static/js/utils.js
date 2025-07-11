@@ -158,5 +158,5 @@ export {
   initializeOpencv,
   resizeRendererToDisplaySize,
   checkWebSocketConnection,
-  updateElements
+  updateElements,
 };

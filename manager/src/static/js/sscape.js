@@ -16,13 +16,13 @@ import {
   SYS_AUTOCALIB_STATUS,
   SYS_CHILDSCENE_STATUS,
   SYS_PERCEBRO_STATUS,
-  REST_URL
+  REST_URL,
 } from "/static/js/constants.js";
 import {
   metersToPixels,
   pixelsToMeters,
   checkWebSocketConnection,
-  updateElements
+  updateElements,
 } from "/static/js/utils.js";
 import { plot } from "/static/js/marks.js";
 import { setupChildScene } from "/static/js/childscene.js";
@@ -33,7 +33,7 @@ import {
   initializeCalibrationSettings,
   updateCalibrationView,
   handleAutoCalibrationPose,
-  setMqttForCalibration
+  setMqttForCalibration,
 } from "/static/js/calibration.js";
 
 var svgCanvas = Snap("#svgout");
@@ -79,8 +79,8 @@ async function checkBrokerConnections() {
   const urlSecure = "wss://" + window.location.host + "/mqtt";
 
   const promises = [
-    checkWebSocketConnection(urlInsecure),  // Check insecure port
-    checkWebSocketConnection(urlSecure)     // Check secure port
+    checkWebSocketConnection(urlInsecure), // Check insecure port
+    checkWebSocketConnection(urlSecure), // Check secure port
   ];
 
   const results = await Promise.allSettled(promises);
@@ -88,8 +88,8 @@ async function checkBrokerConnections() {
   let openPort = null;
   let isSecure = false;
 
-  results.forEach(result => {
-    if (result.status === 'fulfilled') {
+  results.forEach((result) => {
+    if (result.status === "fulfilled") {
       openPort = result.value;
     }
   });
@@ -108,7 +108,7 @@ async function checkBrokerConnections() {
       var client = mqtt.connect(broker.value);
       sessionStorage.setItem("connectToMqtt", true);
 
-      client.on('connect', function () {
+      client.on("connect", function () {
         console.log("Connected to " + broker.value);
         if ($("#topic").val() !== undefined) {
           client.subscribe($("#topic").val());
@@ -116,18 +116,27 @@ async function checkBrokerConnections() {
         }
 
         client.subscribe(APP_NAME + "/event/" + "+/" + scene_id + "/+/+");
-        console.log("Subscribed to " + APP_NAME + "/event/" + "+/" + scene_id + "/+/+");
+        console.log(
+          "Subscribed to " + APP_NAME + "/event/" + "+/" + scene_id + "/+/+",
+        );
 
-        if (document.getElementById("scene_children")?.value !== '0') {
+        if (document.getElementById("scene_children")?.value !== "0") {
           client.subscribe(APP_NAME + SYS_CHILDSCENE_STATUS + "/+");
-          console.log("Subscribed to " + APP_NAME + SYS_CHILDSCENE_STATUS + "/+");
-          var remote_childs = $("[id^='mqtt_status_remote']").map((_, el) => el.id.split('_').slice(3).join('_')).get();
-          remote_childs.forEach(e => {
-            client.publish(APP_NAME + SYS_CHILDSCENE_STATUS + "/" + e, "isConnected");
+          console.log(
+            "Subscribed to " + APP_NAME + SYS_CHILDSCENE_STATUS + "/+",
+          );
+          var remote_childs = $("[id^='mqtt_status_remote']")
+            .map((_, el) => el.id.split("_").slice(3).join("_"))
+            .get();
+          remote_childs.forEach((e) => {
+            client.publish(
+              APP_NAME + SYS_CHILDSCENE_STATUS + "/" + e,
+              "isConnected",
+            );
           });
         }
 
-        if (window.location.href.includes('/cam/calibrate/')) {
+        if (window.location.href.includes("/cam/calibrate/")) {
           // distortion available only for percebro or supporting VA
           initializeCalibration(client, scene_id);
         }
@@ -136,40 +145,39 @@ async function checkBrokerConnections() {
 
         // Capture thumbnail snapshots
         if ($(".snapshot-image").length) {
-          client.subscribe(APP_NAME + IMAGE_CAMERA + '+');
+          client.subscribe(APP_NAME + IMAGE_CAMERA + "+");
 
           $(".snapshot-image").each(function () {
-            client.publish($(this).attr("topic"), 'getimage');
+            client.publish($(this).attr("topic"), "getimage");
           });
 
           $("input#live-view").on("change", function () {
-            if ($(this).is(':checked')) {
+            if ($(this).is(":checked")) {
               $(".snapshot-image").each(function () {
-                client.publish($(this).attr("topic"), 'getimage');
+                client.publish($(this).attr("topic"), "getimage");
               });
               $("#cameras-tab").click(); // Select the cameras tab
               $(".camera-card").addClass("live-view");
               // $(".hide-live").hide();
-            }
-            else {
+            } else {
               $(".camera-card").removeClass("live-view");
               // $(".hide-live").show();
             }
           });
-        }
-        else if ($("#auto-camcalibration").length) {
-          var auto_topic = APP_NAME + DATA_AUTOCALIB_CAM_POSE + $("#sensor_id").val();
+        } else if ($("#auto-camcalibration").length) {
+          var auto_topic =
+            APP_NAME + DATA_AUTOCALIB_CAM_POSE + $("#sensor_id").val();
           client.subscribe(auto_topic);
         }
       });
 
-      client.on('close', function () {
-        $("[id^='mqtt_status']").removeClass("connected")
+      client.on("close", function () {
+        $("[id^='mqtt_status']").removeClass("connected");
         $(".rate").text("--");
         $("#scene-rate").text("--");
       });
 
-      client.on('message', function (topic, data) {
+      client.on("message", function (topic, data) {
         var msg;
         try {
           msg = JSON.parse(data);
@@ -186,54 +194,57 @@ async function checkBrokerConnections() {
             }
 
             // Show the scene controller update rate
-            document.getElementById("scene-rate").innerText = msg.scene_rate.toFixed(1);
+            document.getElementById("scene-rate").innerText =
+              msg.scene_rate.toFixed(1);
           }
 
           // Plot the marks
           plot(msg.objects, scale, scene_y_max, svgCanvas);
-        }
-        else if (topic.includes(SYS_PERCEBRO_STATUS)) {
+        } else if (topic.includes(SYS_PERCEBRO_STATUS)) {
           if (msg == "running") {
             setMqttForCalibration(client);
           }
-        }
-        else if (topic.includes("event")) {
+        } else if (topic.includes("event")) {
           var etype = topic.split("/")[2];
-          if (etype == 'region') {
-            if (msg['metadata']?.fromSensor == true) {
-              drawSensor(msg['metadata'], msg['metadata']['title'], "child_sensor");
+          if (etype == "region") {
+            if (msg["metadata"]?.fromSensor == true) {
+              drawSensor(
+                msg["metadata"],
+                msg["metadata"]["title"],
+                "child_sensor",
+              );
+            } else {
+              drawRoi(msg["metadata"], msg["metadata"]["uuid"], "child_roi");
             }
-            else {
-              drawRoi(msg['metadata'], msg['metadata']['uuid'], "child_roi");
-            }
-            var counts = msg['counts'];
+            var counts = msg["counts"];
             var occupancy = 0;
-            if (counts && typeof counts === 'object') {
+            if (counts && typeof counts === "object") {
               Object.keys(counts).forEach(function (category) {
                 var count = counts[category];
-                if (typeof count === 'number') {
+                if (typeof count === "number") {
                   occupancy += count;
                 }
               });
-              setROIColor(msg['metadata']['uuid'], occupancy);
+              setROIColor(msg["metadata"]["uuid"], occupancy);
             }
 
-            var value = msg['value']
+            var value = msg["value"];
             if (value) {
-              setSensorColor(msg['metadata']['title'], value, msg['metadata']['area']);
+              setSensorColor(
+                msg["metadata"]["title"],
+                value,
+                msg["metadata"]["area"],
+              );
             }
-          }
-          else if (etype == 'tripwire') {
-            var trip = msg['metadata'];
+          } else if (etype == "tripwire") {
+            var trip = msg["metadata"];
             trip.points[0] = metersToPixels(trip.points[0], scale, scene_y_max);
             trip.points[1] = metersToPixels(trip.points[1], scale, scene_y_max);
-            newTripwire(trip, msg['metadata']['uuid'], "child_tripwire");
+            newTripwire(trip, msg["metadata"]["uuid"], "child_tripwire");
           }
-        }
-        else if (topic.includes("singleton")) {
+        } else if (topic.includes("singleton")) {
           plotSingleton(msg);
-        }
-        else if (topic.includes(IMAGE_CAMERA)) {
+        } else if (topic.includes(IMAGE_CAMERA)) {
           // Use native JS since jQuery.load() pukes on data URI's
           if ($(".snapshot-image").length) {
             var id = topic.split("camera/")[1];
@@ -243,8 +254,8 @@ async function checkBrokerConnections() {
               img.setAttribute("src", "data:image/jpeg;base64," + msg.image);
             }
 
-            if ($('input#live-view').is(':checked')) {
-              client.publish(APP_NAME + CMD_CAMERA + id, 'getimage');
+            if ($("input#live-view").is(":checked")) {
+              client.publish(APP_NAME + CMD_CAMERA + id, "getimage");
             }
 
             // If ID contains special characters, selector $("#" + id) fails
@@ -252,44 +263,38 @@ async function checkBrokerConnections() {
               .stop()
               .show()
               .css("opacity", 1)
-              .animate({ opacity: 0.6 }, 5000, function () { })
-              .prevAll(".cam-offline").hide();
+              .animate({ opacity: 0.6 }, 5000, function () {})
+              .prevAll(".cam-offline")
+              .hide();
           }
-        }
-        else if (topic.includes(IMAGE_CALIBRATE)) {
+        } else if (topic.includes(IMAGE_CALIBRATE)) {
           updateCalibrationView(msg);
-        }
-        else if (topic.includes(DATA_CAMERA)) {
-          var id = topic.slice(topic.lastIndexOf('/') + 1);
+        } else if (topic.includes(DATA_CAMERA)) {
+          var id = topic.slice(topic.lastIndexOf("/") + 1);
           $("#rate-" + id).text(msg.rate + " FPS");
           $("#updated-" + id).text(msg.timestamp);
-        }
-        else if (topic.includes("/child/status")) {
-          var child = topic.slice(topic.lastIndexOf('/') + 1)
-          if (msg === 'connected') {
+        } else if (topic.includes("/child/status")) {
+          var child = topic.slice(topic.lastIndexOf("/") + 1);
+          if (msg === "connected") {
             console.log(child + msg);
-            $("#mqtt_status_remote_" + child).addClass('connected')
+            $("#mqtt_status_remote_" + child).addClass("connected");
+          } else if (msg === "disconnected") {
+            $("#mqtt_status_remote_" + child).removeClass("connected");
           }
-          else if (msg === 'disconnected') {
-            $("#mqtt_status_remote_" + child).removeClass('connected')
-          }
-        }
-        else if (topic.includes(SYS_AUTOCALIB_STATUS)) {
-          if (msg === 'running') {
+        } else if (topic.includes(SYS_AUTOCALIB_STATUS)) {
+          if (msg === "running") {
             registerAutoCameraCalibration(client, scene_id);
           }
-        }
-        else if (topic.includes(CMD_AUTOCALIB_SCENE + scene_id)) {
+        } else if (topic.includes(CMD_AUTOCALIB_SCENE + scene_id)) {
           if (msg !== "register") {
             manageCalibrationState(msg, client, scene_id);
           }
-        }
-        else if (topic.includes(DATA_AUTOCALIB_CAM_POSE)) {
+        } else if (topic.includes(DATA_AUTOCALIB_CAM_POSE)) {
           handleAutoCalibrationPose(msg);
         }
       });
 
-      client.on('error', function (e) {
+      client.on("error", function (e) {
         console.log("MQTT error: " + e);
       });
 
@@ -300,10 +305,10 @@ async function checkBrokerConnections() {
 
       var topic = APP_NAME + CMD_CAMERA + $("#sensor_id").val();
       $("#snapshot").on("click", function () {
-        client.publish(topic, 'getcalibrationimage');
+        client.publish(topic, "getcalibrationimage");
       });
       $("#auto-camcalibration").on("click", function () {
-        client.publish(topic, 'localize');
+        client.publish(topic, "localize");
         document.getElementById("auto-camcalibration").disabled = true;
         document.getElementById("reset_points").disabled = true;
         document.getElementById("top_save").disabled = true;
@@ -470,9 +475,12 @@ function stringifyRois() {
 
     // Get volumetric measurement settings
     const formElement = document.getElementById("form-" + i);
-    const volumetric = formElement.querySelector(".roi-volumetric")?.checked || false;
-    const height = parseFloat(formElement.querySelector(".roi-height")?.value) || 1.0;
-    const buffer = parseFloat(formElement.querySelector(".roi-buffer")?.value) || 0.0;
+    const volumetric =
+      formElement.querySelector(".roi-volumetric")?.checked || false;
+    const height =
+      parseFloat(formElement.querySelector(".roi-height")?.value) || 1.0;
+    const buffer =
+      parseFloat(formElement.querySelector(".roi-buffer")?.value) || 0.0;
 
     var roi_sectors = [];
     var input_mins = document.querySelectorAll(
@@ -493,7 +501,7 @@ function stringifyRois() {
       uuid: region_uuid,
       volumetric: volumetric,
       height: height,
-      buffer_size: buffer
+      buffer_size: buffer,
     };
 
     const range_max_element = document.querySelector(
@@ -632,8 +640,7 @@ function closePolygon() {
     editPolygon(this);
   });
 
-  if ($(".sensor").length)
-    group.insertBefore(svgCanvas.select(".sensor"));
+  if ($(".sensor").length) group.insertBefore(svgCanvas.select(".sensor"));
 
   points = [];
   drawing = false;
@@ -689,7 +696,8 @@ function move1(dx, dy) {
     });
 
     // Move the circle measurement area as well
-    svgCanvas.select(".sensor_r")
+    svgCanvas
+      .select(".sensor_r")
       .attr("cx", this.attr("cx"))
       .attr("cy", this.attr("cy"));
   }
@@ -701,7 +709,8 @@ function move1(dx, dy) {
     });
 
     // Move the circle measurement area as well, centered on the icon
-    svgCanvas.select(".sensor_r")
+    svgCanvas
+      .select(".sensor_r")
       .attr("cx", parseInt(this.attr("x")) + icon_size / 2)
       .attr("cy", parseInt(this.attr("y")) + icon_size / 2);
   }
@@ -772,22 +781,26 @@ function stopDragTripwire() {
 function newTripwire(e, index, type = "tripwire") {
   var i = type + "_" + index;
 
-  if (type == 'child_tripwire' && document.getElementById(i)) {
-    var line = document.getElementById(i).querySelector('line')
-    line.setAttribute('x1', e.points[0][0])
-    line.setAttribute('y1', e.points[0][1])
-    line.setAttribute('x2', e.points[1][0])
-    line.setAttribute('y2', e.points[1][1])
-    document.getElementById(i).querySelectorAll('circle').forEach(function (c, idx) {
-      c.setAttribute('cx', e.points[idx][0]);
-      c.setAttribute('cy', e.points[idx][1]);
-    })
-    updateArrow(svgCanvas.select("#" + i))
-    var text = document.getElementById(i).querySelector('text')
-    text.textContent = e.from_child_scene + ' ' + e.title;
-
-  }
-  else if (document.getElementById("tripwire_" + index) === null && svgCanvas) {
+  if (type == "child_tripwire" && document.getElementById(i)) {
+    var line = document.getElementById(i).querySelector("line");
+    line.setAttribute("x1", e.points[0][0]);
+    line.setAttribute("y1", e.points[0][1]);
+    line.setAttribute("x2", e.points[1][0]);
+    line.setAttribute("y2", e.points[1][1]);
+    document
+      .getElementById(i)
+      .querySelectorAll("circle")
+      .forEach(function (c, idx) {
+        c.setAttribute("cx", e.points[idx][0]);
+        c.setAttribute("cy", e.points[idx][1]);
+      });
+    updateArrow(svgCanvas.select("#" + i));
+    var text = document.getElementById(i).querySelector("text");
+    text.textContent = e.from_child_scene + " " + e.title;
+  } else if (
+    document.getElementById("tripwire_" + index) === null &&
+    svgCanvas
+  ) {
     var g = svgCanvas.group();
     if (e.title) {
       e.title = e.title.trim();
@@ -1121,15 +1134,14 @@ function drawRoi(e, index, type) {
         });
 
       var center = polyCenter(roi_points);
-      name_text.setAttribute('x', center[0]);
-      name_text.setAttribute('y', center[1]);
-      hierarchy_text.setAttribute('x', center[0]);
-      hierarchy_text.setAttribute('y', center[1] + 15);
+      name_text.setAttribute("x", center[0]);
+      name_text.setAttribute("y", center[1]);
+      hierarchy_text.setAttribute("x", center[0]);
+      hierarchy_text.setAttribute("y", center[1] + 15);
     }
     name_text.textContent = e.title;
     hierarchy_text.textContent = e.from_child_scene;
-  }
-  else if (document.getElementById("roi_" + index) === null && svgCanvas) {
+  } else if (document.getElementById("roi_" + index) === null && svgCanvas) {
     var g = svgCanvas.group();
     g.attr("id", i).addClass(type);
 
@@ -1179,25 +1191,32 @@ function drawRoi(e, index, type) {
           for: "input-" + i,
         });
 
-      $("#form-" + i).find(".roi-topic > label").text("Topic:  ")
-      $("#form-" + i).find(".roi-topic > .topic-text")
-        .text(APP_NAME + "/event/region/"
-          + scene_id + "/"
-          + index + "/count");
+      $("#form-" + i)
+        .find(".roi-topic > label")
+        .text("Topic:  ");
+      $("#form-" + i)
+        .find(".roi-topic > .topic-text")
+        .text(APP_NAME + "/event/region/" + scene_id + "/" + index + "/count");
 
       // Set volumetric checkbox and related fields
       if (e.volumetric !== undefined) {
-        $("#form-" + i).find(".roi-volumetric").prop('checked', e.volumetric);
+        $("#form-" + i)
+          .find(".roi-volumetric")
+          .prop("checked", e.volumetric);
       }
 
       // Set height field
       if (e.height !== undefined) {
-        $("#form-" + i).find(".roi-height").val(e.height);
+        $("#form-" + i)
+          .find(".roi-height")
+          .val(e.height);
       }
 
       // Set buffer size field
       if (e.buffer_size !== undefined) {
-        $("#form-" + i).find(".roi-buffer").val(e.buffer_size);
+        $("#form-" + i)
+          .find(".roi-buffer")
+          .val(e.buffer_size);
       }
       for (var sector in e.sectors.thresholds) {
         var color = e.sectors.thresholds[sector].color;
@@ -1218,8 +1237,7 @@ function drawRoi(e, index, type) {
           }
         });
       });
-    }
-    else {
+    } else {
       var center = polyCenter(roi_points);
       var nameText = g.text(center[0], center[1], e.title).attr({ id: "name" });
       var hierarchyText = g
@@ -1234,19 +1252,19 @@ function drawSensor(sensor, index, type) {
   var i = type + "_" + index;
 
   if (type === "child_sensor" && document.getElementById(i)) {
-    var name_text = document.getElementById(i).querySelector('#name');
-    var hierarchy_text = document.getElementById(i).querySelector('#hierarchy');
+    var name_text = document.getElementById(i).querySelector("#name");
+    var hierarchy_text = document.getElementById(i).querySelector("#hierarchy");
     if (sensor.x && sensor.y) {
       var p = metersToPixels([sensor.x, sensor.y], scale, scene_y_max);
       sensor.x = p[0];
       sensor.y = p[1];
-      var sensor_circle = document.querySelector('#' + i + ' > .sensor')
-      sensor_circle.setAttribute('cx', sensor?.x)
-      sensor_circle.setAttribute('cy', sensor?.y)
-      name_text.setAttribute('x', sensor?.x);
-      name_text.setAttribute('y', sensor?.y - 7);
-      hierarchy_text.setAttribute('x', sensor?.x);
-      hierarchy_text.setAttribute('y', sensor?.y + 15);
+      var sensor_circle = document.querySelector("#" + i + " > .sensor");
+      sensor_circle.setAttribute("cx", sensor?.x);
+      sensor_circle.setAttribute("cy", sensor?.y);
+      name_text.setAttribute("x", sensor?.x);
+      name_text.setAttribute("y", sensor?.y - 7);
+      hierarchy_text.setAttribute("x", sensor?.x);
+      hierarchy_text.setAttribute("y", sensor?.y + 15);
     }
     if (sensor.area === "circle") {
       var outer_circle = document.querySelector("#" + i + " > .area");
@@ -1265,8 +1283,7 @@ function drawSensor(sensor, index, type) {
         polygon.setAttribute("points", points_string);
       }
     }
-  }
-  else if (document.getElementById("sensor_" + index) === null && svgCanvas) {
+  } else if (document.getElementById("sensor_" + index) === null && svgCanvas) {
     var g = svgCanvas.group();
     g.attr("id", i).addClass("area-group");
 
@@ -1373,14 +1390,18 @@ function setupSceneRotationTranslationFields(event = null) {
   }
 
   var rotation_translation_elements = [
-    "rotation_x_wrapper", 
-    "rotation_y_wrapper", 
+    "rotation_x_wrapper",
+    "rotation_y_wrapper",
     "rotation_z_wrapper",
-    "translation_x_wrapper", 
-    "translation_y_wrapper", 
-    "translation_z_wrapper"
+    "translation_x_wrapper",
+    "translation_y_wrapper",
+    "translation_z_wrapper",
   ];
-  updateElements(rotation_translation_elements, "hidden", scene_rotation_translation_config);
+  updateElements(
+    rotation_translation_elements,
+    "hidden",
+    scene_rotation_translation_config,
+  );
 }
 
 $(document).ready(function () {
@@ -1449,9 +1470,7 @@ $(document).ready(function () {
       scene_y_max = $image.height();
       $image.remove();
 
-      $("#svgout")
-        .width(image_w)
-        .height(scene_y_max);
+      $("#svgout").width(image_w).height(scene_y_max);
       var image = svgCanvas.image(image_src, 0, 0, image_w, scene_y_max);
 
       $("#svgout").show();
@@ -1489,14 +1508,13 @@ $(document).ready(function () {
 
         if (!sensor_icon) {
           var sensor = svgCanvas.circle(sensor_x, sensor_y, 7);
-        }
-        else {
+        } else {
           var sensor = svgCanvas.image(
             sensor_icon,
-            sensor_x - (icon_size / 2),
-            sensor_y - (icon_size / 2),
+            sensor_x - icon_size / 2,
+            sensor_y - icon_size / 2,
             icon_size,
-            icon_size
+            icon_size,
           );
         }
 
@@ -1512,7 +1530,7 @@ $(document).ready(function () {
         var sensor = $.parseJSON($(".area-json", this).val());
         var i = $(".sensor-id", this).text();
         var g = svgCanvas.group();
-        drawSensor(sensor, i, "sensor")
+        drawSensor(sensor, i, "sensor");
         if (sensor.sectors.thresholds.length > 0) {
           singleton_color_sectors[i] = sensor.sectors;
         }
@@ -1794,4 +1812,3 @@ $(document).ready(function () {
     return true; // Normally submit the form
   });
 });
-

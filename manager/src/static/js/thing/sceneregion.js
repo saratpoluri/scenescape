@@ -44,20 +44,20 @@ export default class SceneRegion extends THREE.Object3D {
     this.scaleFactor = this.height;
     this.setPoints();
 
-    if (this.regionType === 'poly') {
+    if (this.regionType === "poly") {
       if (this.buffer_size && this.buffer_size > 0) {
         const inflatedGeometry = this.createPoly(this.createInflatedMesh);
         let inflatedMaterial = new THREE.MeshLambertMaterial({
           color: this.color,
           transparent: true,
-          opacity: this.opacity / 2
+          opacity: this.opacity / 2,
         });
         this.inflatedShape = new THREE.Mesh(inflatedGeometry, inflatedMaterial);
       }
 
-      const polyGeometry = this.createPoly(points => new THREE.Shape(points));
+      const polyGeometry = this.createPoly((points) => new THREE.Shape(points));
       this.shape = new THREE.Mesh(polyGeometry, this.material);
-    } else if (this.regionType === 'circle') {
+    } else if (this.regionType === "circle") {
       let cylinderGeometry = null;
       if (this.region.hasOwnProperty("center")) {
         cylinderGeometry = this.createCircle(
@@ -110,7 +110,7 @@ export default class SceneRegion extends THREE.Object3D {
     let polyGeometry = null;
     if (this.points.length > 0) {
       // Create shape from points, with optional buffer
-      const points2D = this.points.map(p => new THREE.Vector2(p.x, p.y));
+      const points2D = this.points.map((p) => new THREE.Vector2(p.x, p.y));
       let shape = createBasePolygon(points2D);
       polyGeometry = new THREE.ExtrudeGeometry(shape, this.extrudeSettings);
     }
@@ -139,8 +139,12 @@ export default class SceneRegion extends THREE.Object3D {
       const nextPoint = polygonPoints[(i + 1) % pointCount];
 
       // Calculate edge vectors
-      const v1 = new THREE.Vector2().subVectors(currentPoint, prevPoint).normalize();
-      const v2 = new THREE.Vector2().subVectors(nextPoint, currentPoint).normalize();
+      const v1 = new THREE.Vector2()
+        .subVectors(currentPoint, prevPoint)
+        .normalize();
+      const v2 = new THREE.Vector2()
+        .subVectors(nextPoint, currentPoint)
+        .normalize();
 
       // Calculate perpendicular vectors (normals) pointing outward
       const normal1 = new THREE.Vector2(-v1.y * sign, v1.x * sign);
@@ -148,35 +152,41 @@ export default class SceneRegion extends THREE.Object3D {
 
       // Calculate the cross product to determine if the corner is convex or concave
       const crossProduct = v1.x * v2.y - v1.y * v2.x;
-      const isConvex = (crossProduct * sign) < 0;
+      const isConvex = crossProduct * sign < 0;
 
       // Calculate the offset direction
       let offsetVector;
       if (isConvex) {
         // For convex corners, use the miter vector (average of normals)
-        offsetVector = new THREE.Vector2().addVectors(normal1, normal2).normalize();
+        offsetVector = new THREE.Vector2()
+          .addVectors(normal1, normal2)
+          .normalize();
         // Calculate the miter length to maintain constant offset distance
-        const miterLength = this.buffer_size / Math.max(0.1, offsetVector.dot(normal1));
+        const miterLength =
+          this.buffer_size / Math.max(0.1, offsetVector.dot(normal1));
         offsetVector.multiplyScalar(miterLength);
       } else {
         // For concave corners, use a beveled approach with separate offsets
         offsetVector = new THREE.Vector2()
           .addVectors(
             normal1.clone().multiplyScalar(this.buffer_size),
-            normal2.clone().multiplyScalar(this.buffer_size)
+            normal2.clone().multiplyScalar(this.buffer_size),
           )
           .multiplyScalar(0.5);
       }
 
       // Calculate the new inflated point
-      const newPoint = new THREE.Vector2().addVectors(currentPoint, offsetVector);
+      const newPoint = new THREE.Vector2().addVectors(
+        currentPoint,
+        offsetVector,
+      );
       inflatedPoints.push(newPoint);
     }
 
     // 5. Create the Three.js shape and extrude it 🧊
     const inflatedShape = new THREE.Shape(inflatedPoints);
     return inflatedShape;
-  }
+  };
 
   changeGeometry(geometry) {
     if (this.hasOwnProperty("shape") && this.shape !== null) {

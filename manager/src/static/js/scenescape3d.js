@@ -127,11 +127,11 @@ function main() {
         color: "#00ff00",
         height: 0.3,
       },
-      'region': {
-        'manager': RegionManager,
-        'regionsFolder': regionsFolder,
-        'color': '#ff0000',
-        'opacity': 0.4
+      region: {
+        manager: RegionManager,
+        regionsFolder: regionsFolder,
+        color: "#ff0000",
+        opacity: 0.4,
       },
       sensor: {
         manager: SensorManager,

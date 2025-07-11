@@ -12,13 +12,11 @@ function setupChildScene() {
   if (document.getElementById("manage_child")) {
     setupChildSceneType();
     var childTypes = document.querySelectorAll('input[name="child_type"]');
-    childTypes.forEach(radioButton => {
-      radioButton.addEventListener('change', setupChildSceneType)
+    childTypes.forEach((radioButton) => {
+      radioButton.addEventListener("change", setupChildSceneType);
     });
 
-    $("#id_parent")
-      .closest(".transform-group")
-      .removeClass("transform-group");
+    $("#id_parent").closest(".transform-group").removeClass("transform-group");
 
     setupChildTransform();
 
@@ -27,13 +25,13 @@ function setupChildScene() {
     // Set parent automatically
     $('#id_parent>option[value="' + parent_id + '"]')
       .prop("selected", true)
-      .closest(".form-group").addClass("display-none");
+      .closest(".form-group")
+      .addClass("display-none");
 
     // Remove the parent from the child dropdown
     // FIXME: Have backend do this, as well as remove any options that
     // are already assigned to this or another parent
-    $('#id_child>option[value="' + parent_id + '"]')
-      .remove();
+    $('#id_child>option[value="' + parent_id + '"]').remove();
 
     // Add event handler to the tranform type field
     $("#id_transform_type").on("change", setupChildTransform);
@@ -43,18 +41,30 @@ function setupChildScene() {
 }
 
 function setupChildSceneType() {
-  var childType = document.querySelector('input[name="child_type"]:checked').value;
-  var isChildLocal = (childType === 'local');
+  var childType = document.querySelector(
+    'input[name="child_type"]:checked',
+  ).value;
+  var isChildLocal = childType === "local";
 
-  document.getElementById("child_wrapper")['hidden'] = !isChildLocal;
+  document.getElementById("child_wrapper")["hidden"] = !isChildLocal;
 
-  var remoteChildElements = ["child_name_wrapper", "remote_child_id_wrapper", "host_name_wrapper",
-    "mqtt_username_wrapper", "mqtt_password_wrapper"];
-  var elementsRequired = ["id_child_name", "id_remote_child_id", "id_host_name", "id_mqtt_username",
-    "id_mqtt_password"];
+  var remoteChildElements = [
+    "child_name_wrapper",
+    "remote_child_id_wrapper",
+    "host_name_wrapper",
+    "mqtt_username_wrapper",
+    "mqtt_password_wrapper",
+  ];
+  var elementsRequired = [
+    "id_child_name",
+    "id_remote_child_id",
+    "id_host_name",
+    "id_mqtt_username",
+    "id_mqtt_password",
+  ];
 
-  updateElements(remoteChildElements, 'hidden', isChildLocal);
-  updateElements(elementsRequired, 'required', !isChildLocal);
+  updateElements(remoteChildElements, "hidden", isChildLocal);
+  updateElements(elementsRequired, "required", !isChildLocal);
 
   return;
 }
@@ -87,7 +97,8 @@ function setupChildTransform() {
   // Reset visibility and disabled flags
   $(".transform-group")
     .removeClass("display-none")
-    .find("input").prop("disabled", false);
+    .find("input")
+    .prop("disabled", false);
 
   switch (transformType) {
     case "matrix":
@@ -110,21 +121,13 @@ function setupChildTransform() {
       $("#label_transform16").text("Matrix (4,4)");
 
       // Disable fields that shouldn't ever change
-      $("#id_transform13")
-        .val("0.0")
-        .prop("disabled", true);
+      $("#id_transform13").val("0.0").prop("disabled", true);
 
-      $("#id_transform14")
-        .val("0.0")
-        .prop("disabled", true);
+      $("#id_transform14").val("0.0").prop("disabled", true);
 
-      $("#id_transform15")
-        .val("0.0")
-        .prop("disabled", true);
+      $("#id_transform15").val("0.0").prop("disabled", true);
 
-      $("#id_transform16")
-        .val("1.0")
-        .prop("disabled", true);
+      $("#id_transform16").val("1.0").prop("disabled", true);
 
       break;
     case "euler":
@@ -137,37 +140,18 @@ function setupChildTransform() {
       $("#label_transform6").text("Z Rotation (degrees)");
       $("#label_transform7").text("Scale");
 
-      $("#label_transform8")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform9")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform10")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform11")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform12")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform13")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform14")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform15")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform16")
-        .closest(".form-group")
-        .addClass("display-none");
+      $("#label_transform8").closest(".form-group").addClass("display-none");
+      $("#label_transform9").closest(".form-group").addClass("display-none");
+      $("#label_transform10").closest(".form-group").addClass("display-none");
+      $("#label_transform11").closest(".form-group").addClass("display-none");
+      $("#label_transform12").closest(".form-group").addClass("display-none");
+      $("#label_transform13").closest(".form-group").addClass("display-none");
+      $("#label_transform14").closest(".form-group").addClass("display-none");
+      $("#label_transform15").closest(".form-group").addClass("display-none");
+      $("#label_transform16").closest(".form-group").addClass("display-none");
 
       // Set scale fields to 1.0 by default
-      if ($("#id_transform7").val() === "0.0")
-        $("#id_transform7").val("1.0");
+      if ($("#id_transform7").val() === "0.0") $("#id_transform7").val("1.0");
 
       // Make Y and Z transform match the X transform value
       $("#id_transform8").val($("#id_transform7").val());
@@ -185,34 +169,17 @@ function setupChildTransform() {
       $("#label_transform7").text("W Quaternion");
       $("#label_transform8").text("Scale");
 
-      $("#label_transform9")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform10")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform11")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform12")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform13")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform14")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform15")
-        .closest(".form-group")
-        .addClass("display-none");
-      $("#label_transform16")
-        .closest(".form-group")
-        .addClass("display-none");
+      $("#label_transform9").closest(".form-group").addClass("display-none");
+      $("#label_transform10").closest(".form-group").addClass("display-none");
+      $("#label_transform11").closest(".form-group").addClass("display-none");
+      $("#label_transform12").closest(".form-group").addClass("display-none");
+      $("#label_transform13").closest(".form-group").addClass("display-none");
+      $("#label_transform14").closest(".form-group").addClass("display-none");
+      $("#label_transform15").closest(".form-group").addClass("display-none");
+      $("#label_transform16").closest(".form-group").addClass("display-none");
 
       // Set scale fields to 1.0 by default
-      if ($("#id_transform8").val() === "0.0")
-        $("#id_transform8").val("1.0");
+      if ($("#id_transform8").val() === "0.0") $("#id_transform8").val("1.0");
 
       // Make Y and Z transform match the X transform value
       $("#id_transform9").val($("#id_transform8").val());
@@ -222,6 +189,4 @@ function setupChildTransform() {
   }
 }
 
-export {
-  setupChildScene
-};
+export { setupChildScene };

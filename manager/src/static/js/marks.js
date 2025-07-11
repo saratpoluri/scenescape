@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Intel-Edge-Software
 // This file is licensed under the Limited Edge Software Distribution License Agreement.
 
-import { metersToPixels } from '/static/js/utils.js';
+import { metersToPixels } from "/static/js/utils.js";
 
 var mark_radius = 9;
 var marks = {}; // Global object to store marks to improve performance
@@ -20,16 +20,16 @@ function plot(objects, scale, scene_y_max, svgCanvas) {
   var newMarks = new Set();
 
   // Add new marks from the current message into the newMarks set
-  objects.forEach(o => newMarks.add(String(o.id)));
+  objects.forEach((o) => newMarks.add(String(o.id)));
 
   // Remove any newMarks from oldMarks, leaving only expired marks
-  newMarks.forEach(o => oldMarks.delete(o));
+  newMarks.forEach((o) => oldMarks.delete(o));
 
   // Remove oldMarks from both the DOM and the global marks object
   removeExpiredMarks(oldMarks);
 
   // Plot each object in the message
-  objects.forEach(o => {
+  objects.forEach((o) => {
     var mark;
     var trail;
 
@@ -45,16 +45,15 @@ function plot(objects, scale, scene_y_max, svgCanvas) {
 
     // Update mark if it already exists
     if (mark) {
-
       var prev_x = mark.matrix.e;
       var prev_y = mark.matrix.f;
 
       mark.transform("T" + o.translation[0] + "," + o.translation[1]);
       // Update the title element (tooltip) with the new o.id
-      var title = mark.select('title');
+      var title = mark.select("title");
       if (!title) {
         // If a title element does not exist, create one and append it to the mark
-        title = Snap.parse('<title>' + o.id + '</title>');
+        title = Snap.parse("<title>" + o.id + "</title>");
         mark.append(title);
       }
       // Update the text of the existing title element with the new o.id
@@ -62,7 +61,12 @@ function plot(objects, scale, scene_y_max, svgCanvas) {
 
       // Add a new line segment to the trail if enabled
       if (show_trails && trail) {
-        var line = trail.line(prev_x, prev_y, o.translation[0], o.translation[1]);
+        var line = trail.line(
+          prev_x,
+          prev_y,
+          o.translation[0],
+          o.translation[1],
+        );
         line.attr("stroke", mark.select("circle").attr("stroke"));
       }
     }
@@ -74,10 +78,9 @@ function plot(objects, scale, scene_y_max, svgCanvas) {
 }
 
 function removeExpiredMarks(oldMarks) {
-  oldMarks.forEach(o => {
+  oldMarks.forEach((o) => {
     marks[o].remove(); // Remove from DOM
     delete marks[o]; // Delete from the marks object
-
 
     // Also remove old trails
     if (trails[o]) {
@@ -105,14 +108,11 @@ function addNewMark(mark, o, trail, svgCanvas, scale) {
   // FIXME: Make object size in the display a configurable option, or receive from SceneScape
   if (o.type == "person") {
     mark_radius = parseInt(scale * 0.3); // Person is about 0.3 meter radius
-  }
-  else if (o.type == "vehicle") {
+  } else if (o.type == "vehicle") {
     mark_radius = parseInt(scale * 1.5); // Vehicles are about 1.5 meters "radius" (3 meters across)
-  }
-  else if (o.type == "apriltag") {
+  } else if (o.type == "apriltag") {
     mark_radius = parseInt(scale * 0.15); // Arbitrary AprilTag size (smaller than person)
-  }
-  else {
+  } else {
     mark_radius = parseInt(scale * 0.5); // Everything else is 0.5 meters
   }
 
@@ -123,7 +123,7 @@ function addNewMark(mark, o, trail, svgCanvas, scale) {
   circle.attr("stroke", "#" + o.id.substring(0, 6));
 
   // Add a title element to the circle which will act as a tooltip
-  var title = Snap.parse('<title>' + o.id + '</title>');
+  var title = Snap.parse("<title>" + o.id + "</title>");
   circle.append(title);
   // Create Tag ID text for AprilTags only
   if (o.type == "apriltag") {
@@ -142,6 +142,4 @@ function addNewMark(mark, o, trail, svgCanvas, scale) {
 }
 
 // Export methods for external use
-export {
-  plot
-};
+export { plot };
