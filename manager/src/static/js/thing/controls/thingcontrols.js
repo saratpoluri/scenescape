@@ -58,6 +58,9 @@ export default class ThingControls {
     if (this.object3D.hasOwnProperty('shape')) {
       this.object3D.add(this.object3D.shape);
     }
+    if (this.object3D.hasOwnProperty('inflatedShape')) {
+      this.object3D.add(this.object3D.inflatedShape);
+    }
   }
 
   addToScene() {
